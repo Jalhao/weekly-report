@@ -435,7 +435,7 @@ textarea#dataInput::placeholder { color: var(--text3); }
       <div class="col-tag"><b>dsp</b>账户A</div>
       <div class="col-tag"><b>发送数</b>319119688</div>
       <div class="col-tag"><b>竞价率</b>0.2874</div>
-      <div class="col-tag"><b>dsp均价</b>3.4907</div>
+      <div class="col-tag"><b>dsp出价</b>3.4907</div>
       <div class="col-tag"><b>内部胜出率</b>0.1842</div>
       <div class="col-tag"><b>媒体展现率</b>0.0255</div>
       <div class="col-tag"><b>收入</b>30627.05</div>
@@ -570,8 +570,8 @@ textarea#dataInput::placeholder { color: var(--text3); }
           <thead>
             <tr>
               <th>账户</th><th>上周收入</th><th>本周收入</th><th>收入变化</th>
-              <th>CPM 上周→本周</th><th>CPM变化</th><th>DSP均价变化</th>
-              <th>内部胜出率变动</th><th>媒体展现率变化</th><th>收入占比</th>
+              <th>CPM 上周→本周</th><th>CPM变化</th><th>DSP出价变化</th>
+              <th>内部胜出率变化</th><th>媒体展现率变化</th><th>收入占比</th>
             </tr>
           </thead>
           <tbody id="dspTableBody"></tbody>
@@ -618,7 +618,7 @@ textarea#dataInput::placeholder { color: var(--text3); }
             <thead>
               <tr>
                 <th>账户</th><th>本周收入占比</th><th>收入变化贡献</th><th>RPM变化</th>
-                <th>CPM变化</th><th>DSP均价变化</th><th>竞价率变化</th>
+                <th>CPM变化</th><th>DSP出价变化</th><th>竞价率变化</th>
                 <th>媒体展现率变化</th><th>CTR变化</th><th>诊断标签</th>
               </tr>
             </thead>
@@ -642,7 +642,7 @@ textarea#dataInput::placeholder { color: var(--text3); }
           </div>
           <div class="chart-wrap scatter-shell">
             <div class="chart-title">提价响应散点图</div>
-            <div class="chart-sub">X轴=DSP均价环比 · Y轴=RPM环比 · 气泡大小=本周收入</div>
+            <div class="chart-sub">X轴=DSP出价环比 · Y轴=RPM环比 · 气泡大小=本周收入</div>
             <span class="quadrant-label ql-tl">低价高效</span>
             <span class="quadrant-label ql-tr">提价有效</span>
             <span class="quadrant-label ql-bl">低价失速</span>
@@ -662,7 +662,7 @@ textarea#dataInput::placeholder { color: var(--text3); }
           <table class="heatmap-table">
             <thead>
               <tr>
-                <th>账户</th><th>DSP均价</th><th>竞价率</th><th>媒体展现率</th>
+                <th>账户</th><th>DSP出价</th><th>竞价率</th><th>媒体展现率</th>
                 <th>CTR</th><th>CPM</th><th>RPM</th>
               </tr>
             </thead>
@@ -1440,7 +1440,7 @@ function generateReport() {
       {
         label:'提价有效账户数',
         val: String(priceRaiseEffective),
-        prev:'DSP均价≥+5% 且 RPM≥+5%',
+        prev:'DSP出价≥+5% 且 RPM≥+5%',
         chg: priceRaiseEffective ? priceRaiseEffective * 6 : 0,
       },
       {
@@ -1540,12 +1540,12 @@ function generateReport() {
           legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}},
           tooltip:{...TOOLTIP_STYLE,callbacks:{label(c){
             const point = c.raw || { x:0, y:0 };
-            return `  ${c.dataset.label}: DSP均价 ${fmtDelta(point.x,1)} / RPM ${fmtDelta(point.y,1)}`;
+            return `  ${c.dataset.label}: DSP出价 ${fmtDelta(point.x,1)} / RPM ${fmtDelta(point.y,1)}`;
           }}}
         },
         scales:{
           x:{ticks:{color:'#4a5a78',font:{size:10},callback:v=>`${v}%`},grid:{color:GRID_COLOR},
-             title:{display:true,text:'DSP均价环比',color:'#4a5a78',font:{size:10}}},
+             title:{display:true,text:'DSP出价环比',color:'#4a5a78',font:{size:10}}},
           y:{ticks:{color:'#4a5a78',font:{size:10},callback:v=>`${v}%`},grid:{color:GRID_COLOR},
              title:{display:true,text:'RPM环比',color:'#4a5a78',font:{size:10}}}
         }
@@ -2165,7 +2165,7 @@ function renderOptimizationMode(activeDsp) {
     const cards = [
       { label:'收入变化主因', val:mainDriver, prev:'发送量:' + fmtRev(bridgeSend) + ' / RPM:' + fmtRev(bridgeRpm), chg:Math.abs(bridgeRpm) - Math.abs(bridgeSend) },
       { label:'高量低效账户数', val:String(highVolumeLowEff), prev:'基准 RPM 中位数 ' + fmt(fullMedianRpm,4), chg:highVolumeLowEff ? -highVolumeLowEff * 6 : 0 },
-      { label:'提价有效账户数', val:String(priceRaiseEffective), prev:'DSP均价≥+5% 且 RPM≥+5%', chg:priceRaiseEffective ? priceRaiseEffective * 6 : 0 },
+      { label:'提价有效账户数', val:String(priceRaiseEffective), prev:'DSP出价≥+5% 且 RPM≥+5%', chg:priceRaiseEffective ? priceRaiseEffective * 6 : 0 },
       { label:'需优先修复账户数', val:String(needFixCount), prev:'收入占比≥15% 且 RPM≤-5%', chg:needFixCount ? -needFixCount * 6 : 0 }
     ];
     kpiEl.innerHTML = cards.map(function(k){
@@ -2205,7 +2205,7 @@ function renderOptimizationMode(activeDsp) {
     data:{ datasets:subset.map(function(s){ return { label:s.dsp, data:[{ x:s.dspChg, y:s.rpmChg, r:Math.max(7, Math.min(22, Math.sqrt((s.tw.totalRev || 0) / maxBubbleRev) * 22)) }], backgroundColor:s.color + '88', borderColor:s.color, borderWidth:1.5 }; }) },
     options:{
       responsive:true, _quadrants:true,
-      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:{ backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78', callbacks:{ label:function(c){ const p = c.raw || { x:0, y:0 }; return '  ' + c.dataset.label + ': DSP均价 ' + fmtDelta(p.x,1) + ' / RPM ' + fmtDelta(p.y,1); } } } },
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:{ backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78', callbacks:{ label:function(c){ const p = c.raw || { x:0, y:0 }; return '  ' + c.dataset.label + ': DSP出价 ' + fmtDelta(p.x,1) + ' / RPM ' + fmtDelta(p.y,1); } } } },
       scales:{ x:{ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return v + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'DSP均价环比',color:'#4a5a78',font:{size:10}}}, y:{ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return v + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'RPM环比',color:'#4a5a78',font:{size:10}}} }
     }
   });
