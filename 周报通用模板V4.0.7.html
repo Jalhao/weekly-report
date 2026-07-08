@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周报生成器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   CSS VARIABLES — Light Theme
+══════════════════════════════════════════ */
+:root {
+  --bg:      #f4f6fb;
+  --bg2:     #ffffff;
+  --bg3:     #eef1f8;
+  --border:  #dde3f0;
+  --border2: #c8d2e8;
+  --text:    #1a2235;
+  --text2:   #4a5a78;
+  --text3:   #8fa3c0;
+  --accent:  #2563eb;
+  --accent2: #1d4ed8;
+  --red:     #e11d48;
+  --red2:    #be123c;
+  --green:   #059669;
+  --green2:  #047857;
+  --yellow:  #d97706;
+  --yellow2: #b45309;
+  --purple:  #7c3aed;
+  --cyan:    #0891b2;
+  --orange:  #ea580c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════
+   INPUT SCREEN
+══════════════════════════════════════════ */
+#inputScreen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--bg);
+}
+.input-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 48px;
+  width: 100%;
+  max-width: 860px;
+  box-shadow: 0 4px 24px rgba(37,99,235,0.06);
+}
+.input-logo {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 28px;
+}
+.input-logo-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(37,99,235,0.4);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{ box-shadow: 0 0 6px rgba(37,99,235,0.4); }
+  50%    { box-shadow: 0 0 16px rgba(37,99,235,0.7); }
+}
+.input-logo-text { font-size: 12px; color: var(--text3); letter-spacing: 2px; font-family: 'DM Mono', monospace; text-transform: uppercase; }
+.input-title { font-size: 24px; font-weight: 900; margin-bottom: 6px; letter-spacing: -0.3px; }
+.input-title span { color: var(--accent); }
+.input-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+
+.input-tip {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+  font-size: 12px; color: var(--text2); line-height: 1.9;
+}
+.input-tip b { color: var(--text); }
+.input-tip code {
+  background: var(--border); border-radius: 4px;
+  padding: 1px 6px; font-family: 'DM Mono', monospace; font-size: 11px;
+}
+
+.col-hint {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-bottom: 16px;
+}
+.col-tag {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px;
+  font-size: 10px; text-align: center; color: var(--text3);
+  font-family: 'DM Mono', monospace;
+}
+.col-tag b { display: block; color: var(--text2); font-size: 11px; margin-bottom: 2px; }
+
+textarea#dataInput {
+  width: 100%; height: 220px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--text); background: var(--bg);
+  resize: vertical; outline: none;
+  transition: border-color 0.2s;
+  line-height: 1.6;
+}
+textarea#dataInput:focus { border-color: var(--accent); }
+textarea#dataInput::placeholder { color: var(--text3); }
+
+.input-actions { display: flex; gap: 12px; margin-top: 16px; align-items: center; }
+.btn-generate {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 10px;
+  padding: 13px 32px; font-size: 14px; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.3px;
+  transition: background 0.15s, transform 0.1s;
+  font-family: 'Noto Sans SC', sans-serif;
+}
+.btn-generate:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-generate:active { transform: translateY(0); }
+.btn-load-demo {
+  background: transparent; color: var(--accent);
+  border: 1.5px solid var(--border2); border-radius: 10px;
+  padding: 12px 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: border-color 0.15s;
+  font-family: 'Noto Sans SC', sans-serif;
+}
+.btn-load-demo:hover { border-color: var(--accent); }
+.input-error {
+  color: var(--red); font-size: 12px; margin-top: 10px;
+  display: none; font-family: 'DM Mono', monospace;
+  background: rgba(225,29,72,0.06); border: 1px solid rgba(225,29,72,0.2);
+  border-radius: 8px; padding: 10px 14px; line-height: 1.8;
+  white-space: pre-line;
+}
+
+/* ══════════════════════════════════════════
+   REPORT SCREEN
+══════════════════════════════════════════ */
+#reportScreen { display: none; }
+
+/* ── Header ── */
+.header {
+  position: relative;
+  padding: 40px 48px 30px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden; background: var(--bg2);
+}
+.header::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 15% 50%, rgba(37,99,235,0.05) 0%, transparent 60%),
+              radial-gradient(ellipse at 85% 10%, rgba(124,58,237,0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+.brand-text { font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+.report-meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); line-height: 1.9; }
+.report-title { font-size: 26px; font-weight: 900; margin-top: 18px; letter-spacing: -0.4px; }
+.report-title span { color: var(--accent); }
+.report-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.mode-switch {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 14px; padding: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.mode-tab {
+  border: none; background: transparent; color: var(--text2);
+  border-radius: 999px; padding: 7px 14px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: 'Noto Sans SC', sans-serif; transition: all 0.15s;
+}
+.mode-tab.active {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.22);
+}
+.header-actions { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600;
+}
+.status-badge::before { content:''; width:6px; height:6px; border-radius:50%; }
+.badge-danger  { background: rgba(225,29,72,0.08); border: 1px solid rgba(225,29,72,0.22); color: var(--red2); }
+.badge-danger::before  { background: var(--red); }
+.badge-success { background: rgba(5,150,105,0.08); border: 1px solid rgba(5,150,105,0.22); color: var(--green2); }
+.badge-success::before { background: var(--green); }
+.badge-neutral { background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.22); color: var(--accent); }
+.badge-neutral::before { background: var(--accent); }
+.btn-export {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 7px 16px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+  font-family: 'Noto Sans SC', sans-serif; letter-spacing: 0.3px;
+}
+.btn-export:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-export:active { transform: translateY(0); }
+.btn-back {
+  background: transparent; color: var(--text2);
+  border: 1.5px solid var(--border2); border-radius: 8px;
+  padding: 6px 14px; font-size: 12px; cursor: pointer;
+  font-family: 'Noto Sans SC', sans-serif; transition: border-color 0.15s;
+}
+.btn-back:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Layout ── */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 48px 80px; }
+.section { margin-top: 44px; }
+.section-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 18px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.section-num {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--accent); letter-spacing: 2px;
+  background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.18);
+  border-radius: 4px; padding: 2px 8px;
+}
+.section-title { font-size: 15px; font-weight: 700; }
+.section-desc { font-size: 11px; color: var(--text3); margin-left: auto; font-family: 'DM Mono', monospace; }
+
+/* ── KPI Cards ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media(max-width:900px){ .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+.kpi-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden;
+}
+.kpi-card::after {
+  content: ''; position: absolute; bottom:0; left:0; right:0; height: 2px;
+}
+.kpi-card.kc-neg::after  { background: linear-gradient(90deg,transparent,var(--red),transparent); }
+.kpi-card.kc-pos::after  { background: linear-gradient(90deg,transparent,var(--green),transparent); }
+.kpi-card.kc-neu::after  { background: linear-gradient(90deg,transparent,var(--accent),transparent); }
+.kpi-card.kc-warn::after { background: linear-gradient(90deg,transparent,var(--yellow),transparent); }
+.kpi-label { font-size: 10px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+.kpi-value { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; font-family: 'DM Mono', monospace; }
+.kpi-meta  { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.kpi-prev  { font-size: 11px; color: var(--text3); }
+.kpi-badge {
+  font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace;
+  padding: 2px 7px; border-radius: 4px;
+}
+.b-neg  { background: rgba(225,29,72,0.1);  color: var(--red2);    }
+.b-pos  { background: rgba(5,150,105,0.1);  color: var(--green2);  }
+.b-warn { background: rgba(217,119,6,0.1);  color: var(--yellow2); }
+.b-neu  { background: rgba(37,99,235,0.1);  color: var(--accent);  }
+
+/* ── Charts ── */
+.chart-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 22px;
+}
+.chart-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px; margin-bottom: 3px;
+}
+.chart-title { font-size: 13px; font-weight: 600; margin-bottom: 0; }
+.chart-sub   { font-size: 11px; color: var(--text3); margin-bottom: 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media(max-width:900px){ .grid2,.grid3 { grid-template-columns:1fr; } }
+.mode-view { display: none; }
+.mode-view.active { display: block; }
+
+/* ── DSP Table ── */
+.tbl-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.dsp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dsp-table thead tr { background: var(--bg3); }
+.dsp-table th {
+  padding: 11px 14px; text-align: left; font-size: 10px;
+  color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase;
+  font-family: 'DM Mono', monospace; font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+.dsp-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.dsp-table tr:last-child td { border-bottom: none; }
+.dsp-table tr:hover td { background: rgba(0,0,0,0.015); }
+.dsp-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+.dsp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chg { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 700; }
+.chg.neg { color: var(--red2);    }
+.chg.pos { color: var(--green2);  }
+.chg.neu { color: var(--text3);   }
+.bar-bg   { background: rgba(0,0,0,0.07); border-radius: 3px; height: 5px; overflow: hidden; margin-top: 3px; }
+.bar-fill { height: 100%; border-radius: 3px; }
+
+.diag-tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 56px; padding: 4px 10px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
+  font-family: 'DM Mono', monospace;
+}
+.diag-fix   { background: rgba(225,29,72,0.1);  color: var(--red2);    border: 1px solid rgba(225,29,72,0.2); }
+.diag-scale { background: rgba(5,150,105,0.1);  color: var(--green2);  border: 1px solid rgba(5,150,105,0.2); }
+.diag-down  { background: rgba(234,88,12,0.1);  color: var(--orange);  border: 1px solid rgba(234,88,12,0.2); }
+.diag-watch { background: rgba(37,99,235,0.1);  color: var(--accent);  border: 1px solid rgba(37,99,235,0.2); }
+.diag-stable{ background: rgba(100,116,139,0.12); color: #475569; border: 1px solid rgba(100,116,139,0.22); }
+
+.heatmap-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; overflow-x: auto;
+}
+.heatmap-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.heatmap-table thead tr { background: var(--bg3); }
+.heatmap-table th,
+.heatmap-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+}
+.heatmap-table th {
+  font-size: 10px; color: var(--text3); letter-spacing: 1.4px;
+  text-transform: uppercase; font-family: 'DM Mono', monospace;
+  font-weight: 600;
+}
+.heatmap-table tr:last-child td { border-bottom: none; }
+.heatmap-account { font-weight: 700; white-space: nowrap; }
+.heat-cell {
+  text-align: center; font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 700;
+}
+.heat-neg { background: rgba(225,29,72,0.11); color: var(--red2); }
+.heat-neu { background: rgba(37,99,235,0.07); color: var(--accent); }
+.heat-pos { background: rgba(5,150,105,0.11); color: var(--green2); }
+
+.bridge-meta {
+  margin-top: 10px; font-size: 11px; color: var(--text3);
+  font-family: 'DM Mono', monospace;
+}
+.scatter-shell { position: relative; }
+.quadrant-label {
+  position: absolute; z-index: 2;
+  font-size: 10px; color: var(--text3);
+  background: rgba(255,255,255,0.88); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 8px;
+  font-family: 'DM Mono', monospace;
+}
+.ql-tl { top: 86px; left: 12px; }
+.ql-tr { top: 86px; right: 12px; }
+.ql-bl { bottom: 12px; left: 12px; }
+.ql-br { bottom: 12px; right: 12px; }
+
+/* ── Summary box ── */
+.summary-box {
+  background: rgba(37,99,235,0.04); border: 1px solid rgba(37,99,235,0.16);
+  border-radius: 12px; padding: 18px 22px; margin-bottom: 18px;
+  font-size: 13px; line-height: 1.95; color: var(--text2);
+}
+.summary-box strong { color: var(--text); }
+.hl  { color: var(--accent);  font-weight: 700; font-family: 'DM Mono', monospace; }
+.hlr { color: var(--red2);    font-weight: 700; font-family: 'DM Mono', monospace; }
+.hlg { color: var(--green2);  font-weight: 700; font-family: 'DM Mono', monospace; }
+.hly { color: var(--yellow2); font-weight: 700; }
+
+/* ── Account Filter Bar ── */
+.filter-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.filter-label {
+  font-size: 11px; color: var(--text3);
+  font-family: 'DM Mono', monospace; white-space: nowrap;
+}
+.filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--border2);
+  background: var(--bg2); color: var(--text2);
+  font-family: 'Noto Sans SC', sans-serif;
+  transition: all 0.15s; white-space: nowrap;
+  user-select: none;
+}
+.filter-pill:hover { border-color: var(--accent); color: var(--accent); }
+.filter-pill.active {
+  background: var(--accent); color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+.filter-pill.active .pill-dot { background: rgba(255,255,255,0.7) !important; }
+.pill-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.chart-filter-bar { margin-bottom: 12px; }
+
+/* ── Footer ── */
+.footer {
+  margin-top: 60px; padding: 20px 48px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace;
+  background: var(--bg2);
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     INPUT SCREEN
+══════════════════════════════════════════ -->
+<div id="inputScreen">
+  <div class="input-card">
+    <div class="input-logo">
+      <div class="input-logo-dot"></div>
+      <span class="input-logo-text">DSP · 周报分析</span>
+    </div>
+    <div class="input-title">粘贴数据 · <span>自动生成周报</span></div>
+    <div class="input-subtitle">从Excel直接复制表格内容（含表头），粘贴后点击生成即可</div>
+
+    <div class="input-tip">
+      <b>数据格式要求：</b>直接从Excel / 后台 / 其他广告平台全选复制（Ctrl+A → Ctrl+C），粘贴到下方文本框。<br>
+      系统自动识别列顺序，<b>表头必须包含以下关键词</b>（顺序不限、有别名也能识别）：<br>
+      <code>日期</code> &nbsp;<code>dsp / 账户 / 媒体</code> &nbsp;<code>发送数</code> &nbsp;<code>竞价率</code> &nbsp;
+      <code>dsp平均出价 / 均价</code> &nbsp;<code>内部胜出率 / 胜出率</code> &nbsp;<code>媒体展现率 / 展现率 / 填充率</code> &nbsp;<code>收入</code> &nbsp;
+      <code>点击率</code> &nbsp;<code>cpm</code> &nbsp;<code>千次发送收入 / 千次收入</code> &nbsp;<code>利润率 / 毛利率</code><br><br>
+      <b>✅ 支持的格式：</b>竞价率/点击率/展现率 带% 或不带%均可自动识别 &nbsp;·&nbsp; 数字带千分逗号（1,234）自动清洗 &nbsp;·&nbsp; 不同平台的导出格式（Tab/逗号分隔）<br>
+      <b>数据范围：</b>需包含<b>连续两周（14天）</b>数据，系统自动按日期前后分为上周/本周进行环比。日期格式支持 <code>2026-04-12</code> 或 <code>2026/4/12</code>。
+    </div>
+
+    <div class="col-hint">
+      <div class="col-tag"><b>日期</b>2026-04-12</div>
+      <div class="col-tag"><b>dsp</b>账户A</div>
+      <div class="col-tag"><b>发送数</b>319119688</div>
+      <div class="col-tag"><b>竞价率</b>0.2874</div>
+      <div class="col-tag"><b>dsp出价</b>3.4907</div>
+      <div class="col-tag"><b>内部胜出率</b>0.1842</div>
+      <div class="col-tag"><b>媒体展现率</b>0.0255</div>
+      <div class="col-tag"><b>收入</b>30627.05</div>
+      <div class="col-tag"><b>点击率</b>0.1173</div>
+      <div class="col-tag"><b>cpm</b>15.14</div>
+      <div class="col-tag"><b>千次收入</b>0.096</div>
+      <div class="col-tag"><b>利润率</b>0.214</div>
+    </div>
+
+    <textarea id="dataInput" placeholder="在此粘贴从Excel复制的表格数据（包含表头行）...
+
+示例格式：
+日期	dsp	发送数	竞价率	dsp平均出价	内部胜出率	媒体展现率	收入	点击率	cpm	千次发送收入	利润率
+2026-04-12	京东D	319119688	0.2874	3.4907	0.1842	0.0255	30627.05	0.1173	15.14	0.096	0.214
+2026-04-11	京东D	321060290	0.2678	3.0136	0.1715	0.0252	26451.62	0.1142	13.78	0.0824	0.198
+..."></textarea>
+
+    <div id="inputError" class="input-error"></div>
+
+    <div class="input-actions">
+      <button class="btn-generate" onclick="generateReport()">🚀 生成周报</button>
+      <button class="btn-load-demo" onclick="loadDemoData()">载入示例数据</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     REPORT SCREEN (dynamically rendered)
+══════════════════════════════════════════ -->
+<div id="reportScreen">
+  <div class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <span class="brand-text">DSP · 各预算账户总览</span>
+      </div>
+      <div class="report-meta" id="reportMeta"></div>
+    </div>
+    <div class="report-title" id="reportTitle"></div>
+    <div class="report-sub" id="reportSub"></div>
+    <div class="mode-switch" id="modeSwitch">
+      <button class="mode-tab active" data-mode="report" onclick="handleModeSwitch('report')">汇报模式</button>
+      <button class="mode-tab" data-mode="optimization" onclick="handleModeSwitch('optimization')">优化模式</button>
+    </div>
+    <div class="header-actions">
+      <div class="status-badge" id="statusBadge"></div>
+      <button class="btn-export" onclick="exportReport()">⬇ 导出本周报告</button>
+      <button class="btn-back" onclick="backToInput()">← 重新输入数据</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="mode-view active" id="reportModeView">
+    <!-- 01 KPI -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <span class="section-title">核心指标 · 周环比概览</span>
+        <span class="section-desc" id="kpiDateRange"></span>
+      </div>
+      <div class="summary-box" id="summaryBox"></div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+
+    <!-- 02 趋势图 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <span class="section-title">14日趋势走势</span>
+        <span class="section-desc" id="trendDateRange"></span>
+      </div>
+
+      <!-- Account filter bar -->
+      <div class="filter-bar" id="trendFilterBar">
+        <span class="filter-label">查看账户（收入/出价）：</span>
+        <div class="filter-pills" id="filterPills"></div>
+      </div>
+
+      <div class="chart-wrap" style="margin-bottom:14px">
+        <div class="chart-head">
+          <div class="chart-title" id="trendChartTitle">每日总收入 &amp; 加权CPM &amp; 千次发送收入 · 全部账户</div>
+        </div>
+        <div class="chart-sub">灰色虚线为周分界线 · 点击上方账户筛选器切换视角</div>
+        <canvas id="trendChart" height="110"></canvas>
+      </div>
+        <div class="grid2">
+          <div class="chart-wrap">
+            <div class="chart-head">
+              <div class="chart-title" id="dspPriceTitle">DSP平均出价 · 14日走势</div>
+          </div>
+          <div class="chart-sub">收入加权均值</div>
+          <div class="filter-bar chart-filter-bar" id="priceFilterBar">
+            <span class="filter-label">查看账户：</span>
+            <div class="filter-pills" id="priceFilterPills"></div>
+          </div>
+          <canvas id="dspPriceChart" height="160"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-head">
+            <div class="chart-title" id="rateTitle">媒体展现率 &amp; 竞价率</div>
+          </div>
+          <div class="chart-sub">反映竞价能力与库存质量变化 · 可随上方总筛选同步，也可使用本图筛选器单独切换</div>
+          <div class="filter-bar chart-filter-bar" id="rateFilterBar">
+            <span class="filter-label">查看账户：</span>
+            <div class="filter-pills" id="rateFilterPills"></div>
+          </div>
+          <canvas id="rateChart" height="160"></canvas>
+        </div>
+      </div>
+      <div class="chart-wrap" style="margin-top:14px">
+        <div class="chart-head">
+          <div class="chart-title" id="qualityTitle">内部胜出率 &amp; 利润率 · 全部账户</div>
+        </div>
+        <div class="chart-sub">衡量内部竞价胜出与收益质量 · 可随上方总筛选同步，也可使用本图筛选器单独切换</div>
+        <div class="filter-bar chart-filter-bar" id="qualityFilterBar">
+          <span class="filter-label">查看账户：</span>
+          <div class="filter-pills" id="qualityFilterPills"></div>
+        </div>
+        <canvas id="qualityChart" height="120"></canvas>
+      </div>
+    </div>
+
+    <!-- 03 DSP拆解 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <span class="section-title">各DSP账户拆解分析</span>
+        <span class="section-desc">本周 vs 上周环比</span>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:14px">
+        <table class="dsp-table">
+          <thead>
+            <tr>
+              <th>账户</th><th>上周收入</th><th>本周收入</th><th>收入变化</th>
+              <th>CPM 上周→本周</th><th>CPM变化</th><th>DSP出价变化</th>
+              <th>内部胜出率变化</th><th>媒体展现率变化</th><th>收入占比</th>
+            </tr>
+          </thead>
+          <tbody id="dspTableBody"></tbody>
+        </table>
+      </div>
+      <div class="grid2">
+        <div class="chart-wrap">
+          <div class="chart-title">各DSP周收入对比</div>
+          <div class="chart-sub">上周 vs 本周（¥元）</div>
+          <canvas id="dspRevChart" height="180"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title">各DSP CPM环比变化</div>
+          <div class="chart-sub">本周相对上周变化幅度（%）</div>
+          <canvas id="dspCpmChart" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+    <div class="mode-view" id="optimizationModeView">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-num">01</span>
+          <span class="section-title">账户效率总览</span>
+          <span class="section-desc">放量 / 修复 / 降权判断</span>
+        </div>
+        <div class="filter-bar" id="optimizationFilterBar">
+          <span class="filter-label">查看账户（优化）：</span>
+          <div class="filter-pills" id="optFilterPills"></div>
+        </div>
+        <div class="kpi-grid" id="optimizationKpiGrid"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-num">02</span>
+          <span class="section-title">账户优先级排查</span>
+          <span class="section-desc">默认按收入变化贡献绝对值排序</span>
+        </div>
+        <div class="tbl-wrap">
+          <table class="dsp-table">
+            <thead>
+              <tr>
+                <th>账户</th><th>本周收入占比</th><th>收入变化贡献</th><th>RPM变化</th>
+                <th>CPM变化</th><th>DSP出价变化</th><th>竞价率变化</th>
+                <th>媒体展现率变化</th><th>CTR变化</th><th>诊断标签</th>
+              </tr>
+            </thead>
+            <tbody id="priorityTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-num">03</span>
+          <span class="section-title">效率驱动拆解</span>
+          <span class="section-desc">发送量 vs RPM / 提价响应</span>
+        </div>
+        <div class="grid2">
+          <div class="chart-wrap">
+            <div class="chart-title">收入变化拆解图</div>
+            <div class="chart-sub">发送量贡献 vs RPM贡献，并叠加真实收入变化</div>
+            <canvas id="revenueBridgeChart" height="220"></canvas>
+            <div class="bridge-meta" id="bridgeMeta"></div>
+          </div>
+          <div class="chart-wrap scatter-shell">
+            <div class="chart-title">提价响应散点图</div>
+            <div class="chart-sub">X轴=DSP出价环比 · Y轴=RPM环比 · 气泡大小=本周收入</div>
+            <span class="quadrant-label ql-tl">低价高效</span>
+            <span class="quadrant-label ql-tr">提价有效</span>
+            <span class="quadrant-label ql-bl">低价失速</span>
+            <span class="quadrant-label ql-br">提价无效</span>
+            <canvas id="bidResponseChart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-num">04</span>
+          <span class="section-title">RPM驱动热力图</span>
+          <span class="section-desc">红：≤-5% · 蓝：中性 · 绿：≥+5%</span>
+        </div>
+        <div class="heatmap-wrap">
+          <table class="heatmap-table">
+            <thead>
+              <tr>
+                <th>账户</th><th>DSP出价</th><th>竞价率</th><th>媒体展现率</th>
+                <th>CTR</th><th>CPM</th><th>RPM</th>
+              </tr>
+            </thead>
+            <tbody id="rpmHeatmapBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span id="footerLeft"></span>
+    <span id="footerRight"></span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT ENGINE
+══════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────────────
+   DEMO DATA (same as W15 2026)
+───────────────────────────────────────── */
+const DEMO = `日期	dsp	发送数	竞价率	dsp平均出价	内部胜出率	媒体展现率	收入	点击率	cpm	千次发送收入	利润率
+2026-04-16	京东B	493321508	33.66%	5.0837	37.22%	1.84%	45782.89	17.87%	16.45	0.0928	59.18%
+2026-04-15	京东C	205976461	34.25%	5.073	47.91%	3.38%	43981.84	19.41%	17.65	0.2135	54.10%
+2026-04-16	京东C	200939892	41.03%	4.8461	44.04%	3.15%	43797.8	19.27%	17.36	0.218	54.71%
+2026-04-14	京东C	211565851	33.99%	4.7971	45.74%	3.52%	43638.45	19.04%	16.98	0.2063	54.89%
+2026-04-17	京东B	502136531	34.95%	4.4728	34.90%	1.65%	41960	17.94%	17.08	0.0836	58.77%
+2026-04-16	京东D	312596693	33.13%	3.7177	41.67%	2.87%	40520.25	11.64%	18.73	0.1296	42.70%
+2026-04-17	京东D	317999162	35.07%	3.5703	41.15%	2.55%	40236.31	12.21%	19.72	0.1265	42.54%
+2026-04-13	京东C	214561219	32.28%	4.7243	46.11%	3.06%	38708.75	20.21%	15.66	0.1804	60.41%
+2026-04-17	京东C	206754222	42.24%	4.5522	43.30%	2.57%	37489.26	18.61%	15.98	0.1813	58.65%
+2026-04-15	京东D	307646976	29.30%	3.7933	41.76%	2.81%	37418.28	13.97%	19.31	0.1216	45.37%
+2026-04-14	京东B	498296037	27.48%	4.8642	41.09%	1.90%	37302.14	15.83%	13.31	0.0749	61.92%
+2026-04-13	京东B	498807180	26.06%	4.8425	41.68%	2.05%	36756.41	15.70%	12.59	0.0737	61.87%
+2026-04-14	京东D	317612044	29.73%	3.6556	44.36%	2.47%	36627.54	14.94%	19.14	0.1153	46.05%
+2026-04-15	京东B	494785632	27.29%	5.0171	39.86%	1.88%	34822.11	16.53%	12.38	0.0704	63.98%
+2026-04-21	京东D	311343881	29.34%	3.5746	42.09%	2.40%	34561.48	13.08%	18.89	0.111	49.49%
+2026-04-20	京东D	314387847	31.01%	3.1015	40.59%	2.38%	31628.59	12.37%	17.45	0.1006	47.95%
+2026-04-18	京东B	510056075	32.14%	4.1765	34.50%	1.54%	31420.22	18.16%	14.65	0.0616	59.48%
+2026-04-13	京东D	321811693	28.07%	3.136	43.69%	2.57%	29990.37	12.46%	14.51	0.0932	50.93%
+2026-04-20	京东C	198394044	36.79%	4.0185	42.48%	2.45%	29212.02	19.15%	15.91	0.1472	58.62%
+2026-04-24	京东D	305661442	26.26%	3.748	38.53%	2.32%	28992.6	15.15%	20.13	0.0949	50.14%
+2026-04-21	京东C	196094706	36.52%	4.0673	42.53%	2.68%	28553.98	18.32%	14.4	0.1456	58.82%
+2026-04-18	京东D	312142745	31.98%	3.2596	40.48%	2.45%	27537.65	11.10%	15.54	0.0882	44.21%
+2026-04-18	京东C	201514581	38.08%	4.2956	42.81%	2.32%	27212.08	19.03%	14.3	0.135	60.00%
+2026-04-22	京东D	305277731	27.04%	3.6223	39.85%	2.04%	26292.68	15.11%	19.9	0.0861	49.16%
+2026-04-23	京东D	301877261	27.13%	3.5369	38.37%	2.38%	26292.18	13.49%	16.84	0.0871	52.06%
+2026-04-19	京东D	309520982	29.93%	2.9125	38.73%	2.54%	25804.5	10.73%	16.03	0.0834	43.39%
+2026-04-26	京东D	299137440	24.07%	3.722	40.11%	2.32%	25488.67	16.57%	18.42	0.0852	51.53%
+2026-04-23	京东C	188503836	37.14%	4.0268	42.04%	2.50%	24818.37	17.96%	13.05	0.1317	61.35%
+2026-04-25	京东D	302835942	24.56%	3.5647	39.96%	2.21%	24303.78	16.01%	17.63	0.0803	52.33%
+2026-04-22	京东C	191128302	36.17%	4.0551	43.36%	2.47%	24071.59	17.59%	12.4	0.1259	61.88%
+2026-04-19	京东B	507402744	29.71%	3.1578	32.86%	1.56%	23453.85	14.84%	12.59	0.0462	58.40%
+2026-04-24	京东C	191203584	35.07%	4.2047	40.58%	2.48%	23320.53	17.09%	15.03	0.122	56.59%
+2026-04-19	京东C	195969108	36.40%	3.691	42.26%	2.21%	22886.97	18.76%	14.21	0.1168	58.70%
+2026-04-20	京东B	482450715	31.28%	2.9028	31.08%	1.35%	22143.78	17.97%	13.3	0.0459	61.89%
+2026-04-22	京东G	187976182	29.84%	8.9543	64.29%	3.75%	21977.9	12.95%	8.93	0.1169	45.03%
+2026-04-21	京东B	471686557	29.17%	2.9825	30.01%	1.64%	21644.7	18.27%	12.58	0.0459	60.73%
+2026-04-26	京东C	185092829	30.38%	4.1791	41.67%	2.54%	20158.01	19.29%	14.77	0.1089	56.39%
+2026-04-25	京东C	189985718	30.97%	3.9548	40.72%	2.43%	19079.17	17.76%	13.96	0.1004	57.40%
+2026-04-22	京东B	467835170	26.30%	3.3651	29.78%	1.54%	18665.9	18.72%	12.48	0.0399	62.33%
+2026-04-23	京东B	461122127	26.63%	3.0258	30.45%	1.72%	17295.52	16.39%	10.07	0.0375	62.66%
+2026-04-21	京东G	153690822	12.91%	9.986	66.49%	6.22%	17080.53	18.14%	15.54	0.1111	25.36%
+2026-04-24	京东B	467389955	25.19%	3.1082	30.34%	1.65%	16679.98	16.02%	11.38	0.0357	59.82%
+2026-04-25	京东G	195508311	25.12%	8.1798	55.70%	3.08%	16538.02	13.60%	10.8	0.0846	45.03%
+2026-04-23	京东G	189683690	28.76%	8.3353	60.60%	3.29%	16491.32	11.67%	8.34	0.0869	45.03%
+2026-04-24	京东G	197428943	27.96%	7.9352	55.71%	2.99%	15794.01	12.26%	9.44	0.08	45.03%
+2026-04-26	京东G	194032113	23.13%	7.9748	55.76%	3.29%	14744.25	12.36%	9.85	0.076	45.03%
+2026-04-17	京东M	172486207	23.16%	4.3926	58.27%	3.62%	14250.35	15.46%	14.96	0.0826	11.45%
+2026-04-20	京东M	170557154	21.55%	4.0312	56.88%	4.02%	13916.44	13.46%	14.65	0.0816	11.50%
+2026-04-16	京东M	171757121	22.41%	4.5049	60.54%	3.50%	13892.56	15.48%	15.04	0.0809	11.55%
+2026-04-21	京东M	169161645	23.37%	4.0338	55.76%	3.58%	13683.22	15.30%	15.37	0.0809	11.38%
+2026-04-23	京东M	164972749	21.47%	4.5079	59.64%	3.11%	13264.29	17.15%	17.93	0.0804	11.07%
+2026-04-26	京东B	472027819	21.37%	3.1154	29.77%	1.61%	13033.54	15.62%	10.93	0.0276	59.56%
+2026-04-18	京东M	177451923	21.05%	4.2827	56.33%	3.75%	13001.93	14.86%	14.6	0.0733	11.34%
+2026-04-15	京东M	171295809	20.08%	4.381	65.65%	3.61%	12679.04	13.32%	13.81	0.074	11.19%
+2026-04-25	京东B	481300562	22.08%	2.8438	29.09%	1.53%	12513.53	16.01%	10.2	0.026	61.40%
+2026-04-22	京东M	167053260	20.83%	4.4674	58.04%	3.27%	12444.58	16.07%	16.75	0.0745	11.16%
+2026-04-22	京东F	124261170	37.96%	8.4882	63.75%	1.43%	12313.29	17.30%	15.76	0.0991	45.02%
+2026-04-14	京东M	165537891	19.29%	4.6618	65.42%	4.11%	12034.13	12.64%	12.45	0.0727	11.11%
+2026-04-19	京东M	178052571	19.95%	3.8623	55.44%	3.74%	11824.65	13.42%	14.23	0.0664	11.41%
+2026-04-24	京东M	165471603	19.64%	4.4227	60.69%	2.83%	11464.04	17.67%	18.29	0.0693	11.07%
+2026-04-26	京东M	177517526	16.52%	4.1531	55.17%	3.28%	11290.6	18.57%	18.93	0.0636	11.05%
+2026-04-13	京东M	157710881	17.60%	4.6709	63.15%	4.13%	10953.53	13.75%	13.55	0.0695	10.38%
+2026-04-16	京东G	258415210	1.82%	15.0347	80.72%	11.31%	10876.07	18.64%	19.04	0.0421	24.85%
+2026-04-21	京东Q	221909943	24.92%	2.1001	48.78%	5.53%	10617.56	6.45%	6.27	0.0478	11.79%
+2026-04-25	京东M	177034885	17.40%	4.0949	56.37%	2.87%	10406.09	18.14%	18.58	0.0588	11.10%
+2026-04-22	京东Q	218917241	20.54%	2.4295	45.68%	5.86%	10280.7	7.73%	7.52	0.047	12.02%
+2026-04-17	京东Q	225022681	26.45%	2.3351	50.41%	3.18%	9664.27	8.65%	8.97	0.0429	11.33%
+2026-04-17	京东G	231676175	1.86%	13.7252	80.39%	10.57%	9489.85	20.69%	21.58	0.041	16.79%
+2026-04-20	京东Q	221902826	26.35%	2.0261	50.77%	4.39%	9358.94	6.36%	6.37	0.0422	11.31%
+2026-04-23	京东F	125000602	36.37%	8.6543	63.73%	1.20%	9348.84	15.08%	14.74	0.0748	45.02%
+2026-04-25	京东Q	211744422	20.31%	2.354	45.12%	4.89%	9268.18	8.07%	8.57	0.0438	12.26%
+2026-04-23	京东Q	217046249	21.15%	2.4584	44.60%	5.23%	9175.54	7.53%	7.56	0.0423	11.77%
+2026-04-24	京东Q	217184525	20.79%	2.314	45.89%	4.83%	8933.36	7.78%	7.84	0.0411	12.10%
+2026-04-19	京东Q	229891927	24.86%	2.0087	53.14%	3.80%	8882.66	6.83%	6.81	0.0386	11.54%
+2026-04-26	京东Q	212860493	20.10%	2.1441	42.68%	4.31%	8716.99	9.05%	9.68	0.041	12.55%
+2026-04-24	京东F	121644393	36.27%	8.9857	66.05%	1.10%	8619.62	14.63%	14.78	0.0709	44.93%
+2026-04-16	京东Q	218340425	25.41%	2.3415	49.57%	3.10%	8323.01	9.33%	8.65	0.0381	11.30%
+2026-04-18	京东Q	226435217	24.83%	2.0687	52.55%	3.39%	8315.68	7.06%	7.36	0.0367	11.27%
+2026-04-25	京东F	118142245	33.66%	9.3375	65.79%	0.99%	7870.73	17.24%	16.67	0.0666	45.02%
+2026-04-21	京东F	88470815	21.39%	8.8713	67.63%	2.36%	7829.41	17.96%	17.99	0.0885	30.57%
+2026-04-26	京东F	117662920	31.79%	9.523	66.25%	1.07%	7733.21	17.16%	15.99	0.0657	45.02%
+2026-04-14	京东Q	201473790	22.91%	2.3994	48.65%	3.32%	7244.51	9.06%	8.58	0.036	11.60%
+2026-04-18	京东G	138025669	1.89%	14.2997	80.42%	11.28%	7057.9	23.99%	26.85	0.0511	10.04%
+2026-04-13	京东Q	202812314	21.11%	2.2037	42.92%	3.26%	6884.82	9.98%	10.29	0.0339	10.52%
+2026-04-15	京东Q	207139643	22.88%	2.276	51.37%	3.28%	6628.41	8.25%	7.33	0.032	11.69%
+2026-04-20	京东G	136218119	1.77%	13.3301	78.69%	12.06%	6447.01	24.29%	25.3	0.0473	10.05%
+2026-04-15	京东G	225939617	1.67%	14.519	77.95%	7.11%	5676.48	18.38%	16.1	0.0251	40.52%
+2026-04-19	京东G	134035083	1.71%	12.6872	77.07%	10.89%	5474.29	24.98%	25.58	0.0408	10.04%
+2026-04-20	京东F	64345266	5.71%	10.6956	82.55%	3.74%	3628.81	20.84%	23.6	0.0564	26.22%
+2026-04-14	京东G	221056686	1.44%	13.1085	76.61%	5.43%	3202.39	17.16%	13.76	0.0145	43.10%
+2026-04-13	京东G	135843818	1.34%	14.0717	79.48%	6.48%	2400	16.96%	14.44	0.0177	43.63%
+2026-04-19	京东F	57974789	2.12%	8.6613	82.98%	6.78%	1665.17	18.25%	21.67	0.0287	10.02%
+2026-04-18	京东F	60479019	2.22%	8.2476	80.86%	5.69%	1507.12	18.04%	21.92	0.0249	10.02%
+2026-04-17	京东F	106026186	2.22%	6.8784	76.94%	3.54%	1330.79	15.53%	17.49	0.0126	15.83%
+2026-04-13	京东F	88162297	1.59%	8.6625	77.99%	5.63%	946.38	6.08%	8.44	0.0107	45.03%
+2026-04-16	京东F	142609368	2.07%	6.3391	73.24%	2.83%	789.13	9.26%	9.71	0.0055	24.53%
+2026-04-15	京东F	135101149	1.92%	6.1649	69.92%	2.04%	459.26	7.24%	7.34	0.0034	40.80%
+2026-04-14	京东F	130615319	1.74%	6.6595	70.12%	2.05%	396.6	6.50%	6.68	0.003	45.04%`;
+
+/* ─────────────────────────────────────────
+   DSP COLOR MAP
+───────────────────────────────────────── */
+const DSP_COLORS = [
+  '#ef4444','#f59e0b','#8b5cf6','#10b981','#06b6d4',
+  '#f97316','#ec4899','#3b82f6','#84cc16','#14b8a6'
+];
+
+/* ─────────────────────────────────────────
+   PARSE RAW PASTED DATA
+───────────────────────────────────────── */
+/* ─────────────────────────────────────────
+   ROBUST NUMBER PARSER
+   Handles: "9.98%"→0.0998, "1,234.5"→1234.5, "123"→123
+───────────────────────────────────────── */
+function parseNum(s) {
+  if (s == null) return 0;
+  const str = String(s).trim().replace(/,/g, '');
+  if (str === '' || str === '-' || str === '--') return 0;
+  const isPct = str.endsWith('%');
+  const n = parseFloat(str);
+  if (isNaN(n)) return 0;
+  // If it's a percentage string, convert to decimal (9.98% → 0.0998)
+  return isPct ? n / 100 : n;
+}
+
+/* ─────────────────────────────────────────
+   COLUMN FINDER — supports many aliases
+───────────────────────────────────────── */
+function makeColFinder(headers) {
+  return function findCol(...keys) {
+    for (const k of keys) {
+      const idx = headers.findIndex(h => h.includes(k.toLowerCase()));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+}
+
+/* ─────────────────────────────────────────
+   PARSE RAW PASTED DATA
+   Supports:
+   - Tab-separated (from Excel / 京准通)
+   - % values  e.g. "9.98%"
+   - Flexible column order & aliases
+   - Skips non-data rows (empty / all-dash)
+───────────────────────────────────────── */
+function parseData(raw) {
+  // Normalize line endings and split
+  const lines = raw.trim().replace(/\r\n/g,'\n').replace(/\r/g,'\n')
+                   .split('\n').map(l => l.trim()).filter(l => l);
+
+  if (lines.length < 2) throw new Error('数据行数不足，至少需要表头+1行数据');
+
+  // ── Find header row (first row that contains date-like or dsp-like headers)
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const low = lines[i].toLowerCase();
+    if (low.includes('日期') || low.includes('date') || low.includes('dsp')) {
+      headerIdx = i; break;
+    }
+  }
+
+  // ── Detect separator (tab or comma or multiple spaces)
+  const headerLine = lines[headerIdx];
+  const sep = headerLine.includes('\t') ? '\t'
+            : headerLine.includes(',')  ? ','
+            : /\s{2,}/.test(headerLine) ? /\s{2,}/ : '\t';
+
+  const splitLine = (line) => {
+    if (sep instanceof RegExp) return line.split(sep).map(s=>s.trim());
+    return line.split(sep).map(s=>s.trim());
+  };
+
+  const headers = splitLine(headerLine).map(h => h.trim().toLowerCase());
+  const findCol = makeColFinder(headers);
+
+  // Column index mapping (with many aliases)
+  const colDate  = findCol('日期','date');
+  const colDsp   = findCol('dsp','账户','媒体');
+  const colSend  = findCol('发送数','发送量','请求数','send');
+  const colBid   = findCol('竞价率','bid_rate','竞价');
+  const colDspP  = findCol('dsp平均出价','均价','dsp出价','平均出价','avg_price','出价');
+  const colInternalWin = findCol('内部胜出率','内部胜率','胜出率','internal_win_rate','inner_win_rate','win_rate');
+  const colMedia = findCol('媒体展现率','展现率','填充率','media_rate','show_rate');
+  const colRev   = findCol('收入','revenue','金额');
+  const colCtr   = findCol('点击率','ctr','click_rate');
+  const colCpm   = findCol('cpm','成交单价','千次单价');
+  const colRpm   = findCol('千次发送收入','千次收入','rpm','千次');
+  const colProfitRate = findCol('利润率','毛利率','profit_rate','profit_margin','margin_rate','margin');
+  const colImp   = findCol('展现数','展示数','impressions','impression');
+  const colClick = findCol('点击数','clicks','click');
+  const colSpend = findCol('成本','花费','spend','cost');
+  const colConv  = findCol('转化数','转化','conversions','conversion');
+  const colValue = findCol('转化金额','gmv','value','conversion_value');
+  const colCampaign = findCol('计划','campaign','adgroup','广告组');
+  const colTimeslot = findCol('时段','hour','timeslot','小时');
+  const colDevice = findCol('设备','device','终端');
+  const colPlacement = findCol('广告位','slot','placement','版位');
+
+  // Validate required columns
+  const missing = [];
+  if (colDate < 0) missing.push('日期');
+  if (colDsp  < 0) missing.push('dsp/账户');
+  if (colSend < 0) missing.push('发送数');
+  if (colRev  < 0) missing.push('收入');
+  if (colCpm  < 0) missing.push('cpm');
+  if (missing.length) throw new Error(`找不到必要列：${missing.join('、')}\n\n请检查表头是否包含这些关键词。当前识别到的列：${headers.join(' | ')}`);
+
+  // ── Parse data rows
+  const rows = [];
+  const DATE_RE = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
+
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line || /^[-=\s]+$/.test(line)) continue; // skip separator rows
+
+    const cells = splitLine(line);
+    if (cells.length < Math.max(colDate, colDsp, colSend, colRev, colCpm) + 1) continue;
+
+    const rawDate = (cells[colDate] || '').trim().replace(/\//g, '-');
+    const dateMatch = rawDate.match(DATE_RE);
+    if (!dateMatch) continue; // not a date row
+
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) continue;
+
+    const dspName = (cells[colDsp] || '').trim();
+    if (!dspName) continue;
+
+    const bidRaw   = colBid   >= 0 ? parseNum(cells[colBid])   : 0;
+    const internalWinRaw = colInternalWin >= 0 ? parseNum(cells[colInternalWin]) : 0;
+    const mediaRaw = colMedia >= 0 ? parseNum(cells[colMedia]) : 0;
+    const ctrRaw   = colCtr   >= 0 ? parseNum(cells[colCtr])   : 0;
+    const profitRateRaw = colProfitRate >= 0 ? parseNum(cells[colProfitRate]) : 0;
+
+    // Auto-detect if % values were already divided (e.g. 0.0998 vs 9.98%)
+    // If raw value > 1 and column looks like a rate, divide by 100
+    const autoRate = (v, raw) => {
+      if (String(raw).includes('%')) return v; // already handled by parseNum
+      return v > 1 ? v / 100 : v;             // e.g. 9.98 → 0.0998
+    };
+
+    rows.push({
+      date:    d,
+      dateStr: `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`,
+      dsp:     dspName,
+      send:    parseNum(cells[colSend]),
+      bidRate: autoRate(bidRaw,   colBid   >= 0 ? cells[colBid]   : '0'),
+      dspP:    parseNum(cells[colDspP] ?? '0'),
+      internalWin: autoRate(internalWinRaw, colInternalWin >= 0 ? cells[colInternalWin] : '0'),
+      media:   autoRate(mediaRaw, colMedia >= 0 ? cells[colMedia] : '0'),
+      rev:     parseNum(cells[colRev]),
+      ctr:     autoRate(ctrRaw,   colCtr   >= 0 ? cells[colCtr]   : '0'),
+      cpm:     parseNum(cells[colCpm]),
+      rpm:     colRpm >= 0 ? parseNum(cells[colRpm]) : 0,
+      profitRate: autoRate(profitRateRaw, colProfitRate >= 0 ? cells[colProfitRate] : '0'),
+      impressions: colImp >= 0 ? parseNum(cells[colImp]) : 0,
+      clicks: colClick >= 0 ? parseNum(cells[colClick]) : 0,
+      spend: colSpend >= 0 ? parseNum(cells[colSpend]) : 0,
+      conversions: colConv >= 0 ? parseNum(cells[colConv]) : 0,
+      value: colValue >= 0 ? parseNum(cells[colValue]) : 0,
+      campaign: colCampaign >= 0 ? (cells[colCampaign] || '').trim() : '',
+      timeslot: colTimeslot >= 0 ? (cells[colTimeslot] || '').trim() : '',
+      device: colDevice >= 0 ? (cells[colDevice] || '').trim() : '',
+      placement: colPlacement >= 0 ? (cells[colPlacement] || '').trim() : '',
+    });
+  }
+
+  if (rows.length < 2) {
+    throw new Error(
+      `解析到的有效数据行数为 ${rows.length}，不足以生成报告。\n\n` +
+      `可能原因：\n` +
+      `① 日期格式不是 2026-04-12 或 2026/4/12\n` +
+      `② 数据与表头之间有空行\n` +
+      `③ 列分隔符不是Tab（请从Excel直接复制而非手动输入）`
+    );
+  }
+
+  // Sort by date
+  rows.sort((a, b) => a.date - b.date);
+
+  const uniqueDates = [...new Set(rows.map(r => r.dateStr))].sort();
+  const uniqueDsps  = [...new Set(rows.map(r => r.dsp))];
+
+  if (uniqueDates.length < 2) throw new Error('数据中有效日期不足2天，无法进行环比分析');
+
+  // Auto-split: former half = last week, latter half = this week
+  const half = Math.floor(uniqueDates.length / 2);
+  const lastWeekDates = uniqueDates.slice(0, half);
+  const thisWeekDates = uniqueDates.slice(half);
+
+  return {
+    rows, uniqueDates, uniqueDsps,
+    lastWeekDates, thisWeekDates,
+    lastWeekRows: rows.filter(r => lastWeekDates.includes(r.dateStr)),
+    thisWeekRows: rows.filter(r => thisWeekDates.includes(r.dateStr)),
+    optionalFields: {
+      impressions: colImp >= 0,
+      clicks: colClick >= 0,
+      spend: colSpend >= 0,
+      conversions: colConv >= 0,
+      value: colValue >= 0,
+      campaign: colCampaign >= 0,
+      timeslot: colTimeslot >= 0,
+      device: colDevice >= 0,
+      placement: colPlacement >= 0,
+    },
+  };
+}
+
+/* ─────────────────────────────────────────
+   AGGREGATE HELPERS
+───────────────────────────────────────── */
+function agg(rows) {
+  if (!rows.length) return {};
+  const totalRev  = rows.reduce((s,r)=>s+r.rev,0);
+  const totalSend = rows.reduce((s,r)=>s+r.send,0);
+  const wcpm   = totalRev  ? rows.reduce((s,r)=>s+r.cpm*r.rev,0)  / totalRev  : 0;
+  const wdsp   = totalRev  ? rows.reduce((s,r)=>s+r.dspP*r.rev,0) / totalRev  : 0;
+  const wbid   = totalSend ? rows.reduce((s,r)=>s+r.bidRate*r.send,0)/totalSend: 0;
+  const winRate = totalSend ? rows.reduce((s,r)=>s+(r.internalWin || 0)*r.send,0)/totalSend: 0;
+  const wmedia = totalSend ? rows.reduce((s,r)=>s+r.media*r.send,0)/totalSend  : 0;
+  const wctr   = totalSend ? rows.reduce((s,r)=>s+r.ctr*r.send,0)/totalSend   : 0;
+  const profitRate = totalRev ? rows.reduce((s,r)=>s+(r.profitRate || 0)*r.rev,0)/totalRev : 0;
+  const rpm    = totalSend ? totalRev/totalSend*1000                            : 0;
+  return { totalRev, totalSend, cpm:wcpm, dspP:wdsp, bidRate:wbid, internalWin:winRate, media:wmedia, ctr:wctr, rpm, profitRate };
+}
+
+function pct(a,b) { return b ? ((a-b)/b*100) : 0; }
+function fmt(n,d=2) { return n.toFixed(d); }
+function fmtRev(n) { return n>=10000 ? (n/10000).toFixed(1)+'万' : n.toFixed(0); }
+function dateLabel(s) { return s.slice(5).replace('-','/'); }
+function median(values) {
+  if (!values.length) return 0;
+  const arr = [...values].sort((a,b)=>a-b);
+  const mid = Math.floor(arr.length / 2);
+  return arr.length % 2 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+}
+function metricToneClass(v) {
+  if (v <= -5) return 'heat-neg';
+  if (v >= 5) return 'heat-pos';
+  return 'heat-neu';
+}
+function fmtDelta(v, digits=1) {
+  return `${v>=0?'+':''}${fmt(v,digits)}%`;
+}
+function calcBridgeEffect(tw, lw) {
+  const sendEffect = ((tw.totalSend || 0) - (lw.totalSend || 0)) * ((lw.rpm || 0) / 1000);
+  const rpmEffect  = (tw.totalSend || 0) * (((tw.rpm || 0) - (lw.rpm || 0)) / 1000);
+  return { sendEffect, rpmEffect, totalEffect: sendEffect + rpmEffect };
+}
+function buildOptimizationStats(uniqueDsps, lastWeekRows, thisWeekRows, totalThisRev) {
+  return uniqueDsps.map((dsp,i) => {
+    const lw = agg(lastWeekRows.filter(r=>r.dsp===dsp));
+    const tw = agg(thisWeekRows.filter(r=>r.dsp===dsp));
+    const share = totalThisRev ? (tw.totalRev / totalThisRev * 100) : 0;
+    const revChg = pct(tw.totalRev, lw.totalRev);
+    const rpmChg = pct(tw.rpm, lw.rpm);
+    const cpmChg = pct(tw.cpm, lw.cpm);
+    const dspChg = pct(tw.dspP, lw.dspP);
+    const bidChg = pct(tw.bidRate, lw.bidRate);
+    const internalWinChg = pct(tw.internalWin, lw.internalWin);
+    const mediaChg = pct(tw.media, lw.media);
+    const ctrChg = pct(tw.ctr, lw.ctr);
+    const actualChange = (tw.totalRev || 0) - (lw.totalRev || 0);
+    const bridge = calcBridgeEffect(tw, lw);
+    return {
+      dsp, color:DSP_COLORS[i%DSP_COLORS.length], lw, tw, share,
+      revChg, rpmChg, cpmChg, dspChg, bidChg, internalWinChg, mediaChg, ctrChg,
+      actualChange,
+      sendEffect: bridge.sendEffect,
+      rpmEffect: bridge.rpmEffect,
+      totalEffect: bridge.totalEffect,
+    };
+  });
+}
+function getDiagnosticLabel(stat, medianRpm) {
+  if (stat.share >= 15 && stat.rpmChg <= -5) return { text:'该修复', cls:'diag-fix' };
+  if ((stat.tw.rpm || 0) >= medianRpm && stat.rpmChg >= 5) return { text:'该放量', cls:'diag-scale' };
+  if ((stat.tw.rpm || 0) < medianRpm && stat.revChg <= -10) return { text:'降权', cls:'diag-down' };
+  if (stat.share < 10 && (stat.tw.rpm || 0) >= medianRpm) return { text:'观察', cls:'diag-watch' };
+  return { text:'稳定', cls:'diag-stable' };
+}
+function getSubsetStats(stats, activeDsp) {
+  return activeDsp === '__all__' ? stats : stats.filter(s => s.dsp === activeDsp);
+}
+function optionalFieldNames(optionalFields={}) {
+  return Object.keys(optionalFields).filter(k => optionalFields[k]);
+}
+
+/* ─────────────────────────────────────────
+   CHART INSTANCES (for destruction)
+───────────────────────────────────────── */
+const chartInstances = {};
+function destroyChart(id) { if(chartInstances[id]){ chartInstances[id].destroy(); delete chartInstances[id]; } }
+
+Chart.defaults.color = '#4a5a78';
+Chart.defaults.borderColor = '#dde3f0';
+Chart.defaults.font.family = "'DM Mono', monospace";
+
+function mkChart(id, config) {
+  destroyChart(id);
+  chartInstances[id] = new Chart(document.getElementById(id).getContext('2d'), config);
+}
+
+const TOOLTIP_STYLE = { backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78' };
+const GRID_COLOR = '#eef1f8';
+
+/* ─────────────────────────────────────────
+   WEEK-DIVIDER PLUGIN
+───────────────────────────────────────── */
+const weekDivPlugin = {
+  id:'weekDiv',
+  afterDraw(chart) {
+    const {ctx,scales,chartArea} = chart;
+    if (!scales['x'] || !chart.config.options._divideAt) return;
+    const div = chart.config.options._divideAt;
+    const x = (scales['x'].getPixelForValue(div-1)+scales['x'].getPixelForValue(div))/2;
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,chartArea.top); ctx.lineTo(x,chartArea.bottom); ctx.stroke();
+    ctx.font='10px DM Mono,monospace'; ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.textAlign='center';
+    ctx.fillText('上周 | 本周', x, chartArea.top+12);
+    ctx.restore();
+  }
+};
+Chart.register(weekDivPlugin);
+const quadrantGuidePlugin = {
+  id:'quadrantGuide',
+  afterDraw(chart) {
+    if (!chart.config.options?._quadrants) return;
+    const { ctx, chartArea, scales } = chart;
+    const xScale = scales.x;
+    const yScale = scales.y;
+    if (!xScale || !yScale) return;
+    const xZero = xScale.getPixelForValue(0);
+    const yZero = yScale.getPixelForValue(0);
+    ctx.save();
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = 'rgba(100,116,139,0.5)';
+    ctx.lineWidth = 1;
+    if (xZero >= chartArea.left && xZero <= chartArea.right) {
+      ctx.beginPath(); ctx.moveTo(xZero, chartArea.top); ctx.lineTo(xZero, chartArea.bottom); ctx.stroke();
+    }
+    if (yZero >= chartArea.top && yZero <= chartArea.bottom) {
+      ctx.beginPath(); ctx.moveTo(chartArea.left, yZero); ctx.lineTo(chartArea.right, yZero); ctx.stroke();
+    }
+    ctx.restore();
+  }
+};
+Chart.register(quadrantGuidePlugin);
+
+/* ─────────────────────────────────────────
+   MAIN RENDER
+───────────────────────────────────────── */
+function generateReport() {
+  const raw = document.getElementById('dataInput').value;
+  const errEl = document.getElementById('inputError');
+  errEl.style.display='none';
+
+  let parsed;
+  try { parsed = parseData(raw); }
+  catch(e) { errEl.textContent='⚠ '+e.message; errEl.style.display='block'; return; }
+
+  const { rows, uniqueDates, uniqueDsps, lastWeekDates, thisWeekDates, lastWeekRows, thisWeekRows, optionalFields } = parsed;
+
+  const LW = agg(lastWeekRows);
+  const TW = agg(thisWeekRows);
+  const totalRevChg = pct(TW.totalRev, LW.totalRev);
+  const uiState = {
+    currentMode: 'report',
+    reportFilters: { trend: '__all__', price: '__all__', rate: '__all__', quality: '__all__' },
+    optFilter: '__all__',
+  };
+
+  // ── Header
+  const today = new Date();
+  const weekNum = Math.ceil((((today-new Date(today.getFullYear(),0,1))/86400000)+new Date(today.getFullYear(),0,1).getDay()+1)/7);
+  document.getElementById('reportTitle').innerHTML = `各账户预算 <span>数据周报</span> · W${weekNum}`;
+  document.getElementById('reportSub').textContent = `账户矩阵：${uniqueDsps.join(' · ')}`;
+  document.getElementById('reportMeta').innerHTML =
+    `<div>报告周期 &nbsp;${thisWeekDates[0].slice(5)} → ${thisWeekDates[thisWeekDates.length-1].slice(5)}</div>
+     <div>对比基准 &nbsp;${lastWeekDates[0].slice(5)} → ${lastWeekDates[lastWeekDates.length-1].slice(5)}</div>
+     <div>生成日期 &nbsp;${today.toISOString().slice(0,10)}</div>`;
+
+  const sb = document.getElementById('statusBadge');
+  if (totalRevChg < -5) { sb.className='status-badge badge-danger'; sb.textContent='本周整体收入下滑 · 需重点关注'; }
+  else if (totalRevChg > 5) { sb.className='status-badge badge-success'; sb.textContent='本周整体收入增长 · 势头良好'; }
+  else { sb.className='status-badge badge-neutral'; sb.textContent='本周收入基本持平'; }
+
+  document.getElementById('kpiDateRange').textContent = `本周 ${thisWeekDates[0].slice(5)} — ${thisWeekDates[thisWeekDates.length-1].slice(5)}`;
+  document.getElementById('trendDateRange').textContent = `${uniqueDates[0].slice(5)} — ${uniqueDates[uniqueDates.length-1].slice(5)}`;
+
+  // ── Summary
+  const peakDay   = [...rows].sort((a,b)=>b.rev-a.rev)[0];
+  const peakLabel = dateLabel(peakDay.dateStr);
+  const peakShare = LW.totalRev ? (peakDay.rev/LW.totalRev*100).toFixed(1) : '-';
+  const revDir  = totalRevChg < 0 ? '下滑' : '增长';
+  const revSign = totalRevChg < 0 ? 'hlr' : 'hlg';
+
+  document.getElementById('summaryBox').innerHTML = `
+    本周（${thisWeekDates[0].slice(5)}-${thisWeekDates[thisWeekDates.length-1].slice(5)}）账户整体
+    <strong>总收入 ¥${fmtRev(TW.totalRev)}</strong>，环比上周
+    <span class="${revSign}">${totalRevChg>=0?'+':''}${fmt(totalRevChg,1)}%</span>。
+    发送量环比 <span class="${TW.totalSend>LW.totalSend?'hlg':'hlr'}">${pct(TW.totalSend,LW.totalSend)>=0?'+':''}${fmt(pct(TW.totalSend,LW.totalSend),1)}%</span>，
+    DSP平均出价 <span class="${TW.dspP>LW.dspP?'hlg':'hlr'}">${pct(TW.dspP,LW.dspP)>=0?'+':''}${fmt(pct(TW.dspP,LW.dspP),1)}%</span>，
+    CPM <span class="${TW.cpm>LW.cpm?'hlg':'hlr'}">${pct(TW.cpm,LW.cpm)>=0?'+':''}${fmt(pct(TW.cpm,LW.cpm),1)}%</span>，
+    千次发送收入（变现效率）<span class="${TW.rpm>LW.rpm?'hlg':'hlr'}">${pct(TW.rpm,LW.rpm)>=0?'+':''}${fmt(pct(TW.rpm,LW.rpm),1)}%</span>。
+    ${lastWeekDates.includes(peakDay.dateStr) ?
+      `注意：上周基数中含 <span class="hl">${peakLabel} 极端峰值日（单日¥${peakDay.rev.toLocaleString('zh-CN',{maximumFractionDigits:0})}，占上周${peakShare}%）</span>，
+      一定程度上放大了环比跌幅的视觉效果。` : ''}`;
+
+  // ── KPI Grid
+  const kpis = [
+    { label:'总收入', val:'¥'+fmtRev(TW.totalRev), prev:'上周 ¥'+fmtRev(LW.totalRev), chg:pct(TW.totalRev,LW.totalRev) },
+    { label:'加权CPM', val:fmt(TW.cpm), prev:'上周 '+fmt(LW.cpm), chg:pct(TW.cpm,LW.cpm) },
+    { label:'DSP平均出价', val:fmt(TW.dspP), prev:'上周 '+fmt(LW.dspP), chg:pct(TW.dspP,LW.dspP) },
+    { label:'总发送量', val:(TW.totalSend/1e8).toFixed(1)+'亿', prev:'上周 '+(LW.totalSend/1e8).toFixed(1)+'亿', chg:pct(TW.totalSend,LW.totalSend) },
+    { label:'媒体展现率', val:fmt(TW.media*100,2)+'%', prev:'上周 '+fmt(LW.media*100,2)+'%', chg:pct(TW.media,LW.media) },
+    { label:'竞价率', val:fmt(TW.bidRate*100,2)+'%', prev:'上周 '+fmt(LW.bidRate*100,2)+'%', chg:pct(TW.bidRate,LW.bidRate) },
+    { label:'点击率CTR', val:fmt(TW.ctr*100,2)+'%', prev:'上周 '+fmt(LW.ctr*100,2)+'%', chg:pct(TW.ctr,LW.ctr) },
+    { label:'千次发送收入', val:fmt(TW.rpm,4), prev:'上周 '+fmt(LW.rpm,4), chg:pct(TW.rpm,LW.rpm) },
+  ];
+  const kpiGrid = document.getElementById('kpiGrid');
+  kpiGrid.innerHTML = kpis.map(k => {
+    const neg = k.chg < -1; const pos = k.chg > 1;
+    const cls = neg ? 'kc-neg' : pos ? 'kc-pos' : 'kc-neu';
+    const bcls = neg ? 'b-neg' : pos ? 'b-pos' : 'b-neu';
+    const vcls = neg ? 'var(--red2)' : pos ? 'var(--green2)' : 'var(--accent)';
+    const arrow = k.chg >= 0 ? '▲' : '▼';
+    return `<div class="kpi-card ${cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value" style="color:${vcls}">${k.val}</div>
+      <div class="kpi-meta">
+        <span class="kpi-prev">${k.prev}</span>
+        <span class="kpi-badge ${bcls}">${arrow} ${Math.abs(k.chg).toFixed(1)}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const dateLabels = uniqueDates.map(dateLabel);
+  const halfIdx = lastWeekDates.length;
+
+  // ── Build day-level lookup for any DSP filter
+  const dayMap = {};
+  for (const r of rows) {
+    if (!dayMap[r.dateStr]) dayMap[r.dateStr] = [];
+    dayMap[r.dateStr].push(r);
+  }
+
+  // ── Compute day aggregates for a given row subset
+  function computeDayMetrics(filteredRows) {
+    const fm = {};
+    for (const r of filteredRows) {
+      if (!fm[r.dateStr]) fm[r.dateStr] = [];
+      fm[r.dateStr].push(r);
+    }
+    const revs   = uniqueDates.map(d => { const dr=fm[d]; return dr?dr.reduce((s,r)=>s+r.rev,0):0; });
+    const cpms   = uniqueDates.map(d => { const dr=fm[d]; if(!dr) return 0; const tr=dr.reduce((s,r)=>s+r.rev,0); return tr?dr.reduce((s,r)=>s+r.cpm*r.rev,0)/tr:0; });
+    const rpms   = uniqueDates.map(d => { const dr=fm[d]; if(!dr) return 0; const ts=dr.reduce((s,r)=>s+r.send,0); const tr=dr.reduce((s,r)=>s+r.rev,0); return ts?tr/ts*1000:0; });
+    const medias = uniqueDates.map(d => { const dr=fm[d]; if(!dr) return 0; const ts=dr.reduce((s,r)=>s+r.send,0); return ts?dr.reduce((s,r)=>s+r.media*r.send,0)/ts:0; });
+    const bids   = uniqueDates.map(d => { const dr=fm[d]; if(!dr) return 0; const ts=dr.reduce((s,r)=>s+r.send,0); return ts?dr.reduce((s,r)=>s+r.bidRate*r.send,0)/ts:0; });
+    const internalWins = uniqueDates.map(d => { const dr=fm[d]; if(!dr) return 0; const ts=dr.reduce((s,r)=>s+r.send,0); return ts?dr.reduce((s,r)=>s+(r.internalWin || 0)*r.send,0)/ts:0; });
+    const profitRates = uniqueDates.map(d => { const dr=fm[d]; if(!dr) return 0; const tr=dr.reduce((s,r)=>s+r.rev,0); return tr?dr.reduce((s,r)=>s+(r.profitRate || 0)*r.rev,0)/tr:0; });
+    return { revs, cpms, rpms, medias, bids, internalWins, profitRates };
+  }
+
+  // ── DSP price day map (all DSPs, for the multi-line chart)
+  const dspDayMap = {};
+  for (const dsp of uniqueDsps) {
+    dspDayMap[dsp] = uniqueDates.map(d => {
+      const dr = rows.filter(r=>r.dateStr===d&&r.dsp===dsp);
+      if (!dr.length) return null;
+      const tr = dr.reduce((s,r)=>s+r.rev,0);
+      return tr ? dr.reduce((s,r)=>s+r.dspP*r.rev,0)/tr : 0;
+    });
+  }
+
+  const totalThisRev = TW.totalRev;
+  const fullStats = buildOptimizationStats(uniqueDsps, lastWeekRows, thisWeekRows, totalThisRev);
+  const fullMedianRpm = median(fullStats.map(s => s.tw.rpm || 0).filter(v => v > 0));
+  const dspStats = fullStats.map(s => ({ ...s, diag: getDiagnosticLabel(s, fullMedianRpm) }))
+    .sort((a,b) => b.tw.totalRev - a.tw.totalRev);
+
+  // ── Core chart-render functions (called on init & on filter change)
+  function renderTrendCharts(activeDsp) {
+    // Determine row subset
+    const subset = activeDsp === '__all__' ? rows : rows.filter(r=>r.dsp===activeDsp);
+    const { revs, cpms, rpms } = computeDayMetrics(subset);
+    const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+    const dspIdx = uniqueDsps.indexOf(activeDsp);
+    const dspColor = activeDsp === '__all__' ? '#2563eb' : DSP_COLORS[dspIdx % DSP_COLORS.length];
+
+    // Update chart titles
+    document.getElementById('trendChartTitle').textContent = `每日收入 & 加权CPM & 千次发送收入 · ${label}`;
+    document.getElementById('dspPriceTitle').textContent = activeDsp === '__all__'
+      ? 'DSP平均出价 · 各账户14日走势'
+      : 'DSP平均出价 · ' + label + ' 14日走势';
+
+    // ── Trend (revenue + CPM)
+    mkChart('trendChart',{
+      type:'bar',
+      data:{ labels:dateLabels, datasets:[
+        { type:'line', label:'加权CPM', data:cpms, yAxisID:'yCPM',
+          borderColor:'#d97706', backgroundColor:'transparent',
+          pointBackgroundColor:'#d97706', pointRadius:4, borderWidth:2.2, tension:0.35, order:1 },
+        { type:'line', label:'千次发送收入', data:rpms, yAxisID:'yRPM',
+          borderColor:'#059669', backgroundColor:'transparent',
+          pointBackgroundColor:'#059669', pointRadius:4, borderWidth:2.2, tension:0.35, order:1 },
+        { type:'bar', label:'收入(¥)', data:revs, yAxisID:'yRev',
+          backgroundColor: revs.map((_,i)=>i<halfIdx?`${dspColor}26`:`${dspColor}6a`),
+          borderColor:     revs.map((_,i)=>i<halfIdx?`${dspColor}50`:`${dspColor}bb`),
+          borderWidth:1, borderRadius:4, order:2 }
+      ]},
+      options:{ responsive:true, _divideAt:halfIdx,
+        interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{labels:{color:'#4a5a78',font:{size:11},boxWidth:12}}, tooltip:TOOLTIP_STYLE },
+        scales:{
+          x:{ticks:{color:'#8fa3c0',font:{size:10}},grid:{color:GRID_COLOR}},
+          yCPM:{type:'linear',position:'left',ticks:{color:'#d97706',font:{size:10}},grid:{color:GRID_COLOR},
+                title:{display:true,text:'CPM',color:'#d97706',font:{size:10}}},
+          yRPM:{type:'linear',position:'right',grid:{display:false},
+                ticks:{color:'#059669',font:{size:10},callback:v=>Number(v).toFixed(4)},
+                title:{display:true,text:'千次发送收入',color:'#059669',font:{size:10}}},
+          yRev:{type:'linear',position:'right',grid:{display:false},
+                ticks:{color:dspColor,font:{size:10},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},
+                title:{display:true,text:'收入(¥)',color:dspColor,font:{size:10}}}
+        }
+      }
+    });
+
+    renderPriceChart(activeDsp);
+  }
+
+  function renderPriceChart(activeDsp) {
+    const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+    const dspIdx = uniqueDsps.indexOf(activeDsp);
+    const dspColor = activeDsp === '__all__' ? '#2563eb' : DSP_COLORS[dspIdx % DSP_COLORS.length];
+    document.getElementById('dspPriceTitle').textContent = activeDsp === '__all__'
+      ? 'DSP平均出价 · 各账户14日走势'
+      : 'DSP平均出价 · ' + label + ' 14日走势';
+
+    // ── DSP Price Chart
+    // All mode: multi-line, one per DSP
+    // Single mode: single highlighted line
+    const priceDatasets = activeDsp === '__all__'
+      ? uniqueDsps.map((dsp,i)=>({
+          label:dsp, data:dspDayMap[dsp],
+          borderColor:DSP_COLORS[i%DSP_COLORS.length], backgroundColor:'transparent',
+          pointRadius:3, borderWidth:1.8, tension:0.35, spanGaps:true
+        }))
+      : [{ label:activeDsp, data:dspDayMap[activeDsp],
+           borderColor:dspColor, backgroundColor:`${dspColor}18`,
+           fill:true, pointRadius:4, pointBackgroundColor:dspColor,
+           borderWidth:2.2, tension:0.35, spanGaps:true }];
+
+    mkChart('dspPriceChart',{
+      type:'line',
+      data:{ labels:dateLabels, datasets:priceDatasets },
+      options:{ responsive:true, _divideAt:halfIdx,
+        plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:TOOLTIP_STYLE },
+        scales:{
+          x:{ticks:{color:'#8fa3c0',font:{size:9}},grid:{color:GRID_COLOR}},
+          y:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR},
+             title:{display:true,text:'DSP出价',color:'#4a5a78',font:{size:10}}}
+        }
+      }
+    });
+
+  }
+
+  function renderRateChart(activeDsp) {
+    const subset = activeDsp === '__all__' ? rows : rows.filter(r=>r.dsp===activeDsp);
+    const { medias, bids } = computeDayMetrics(subset);
+    const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+
+    // ── Rate Chart
+    document.getElementById('rateTitle').textContent = `媒体展现率 & 竞价率 · ${label}`;
+    mkChart('rateChart',{
+      type:'line',
+      data:{ labels:dateLabels, datasets:[
+        { label:'媒体展现率', data:medias, yAxisID:'y1',
+          borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.06)',
+          fill: activeDsp !== '__all__',
+          pointRadius:3, borderWidth:1.8, tension:0.35 },
+        { label:'竞价率', data:bids, yAxisID:'y2',
+          borderColor:'#ea580c', backgroundColor:'rgba(234,88,12,0.06)',
+          fill: activeDsp !== '__all__',
+          pointRadius:3, borderWidth:1.8, tension:0.35 },
+      ]},
+      options:{ responsive:true, _divideAt:halfIdx,
+        plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:TOOLTIP_STYLE },
+        scales:{
+          x:{ticks:{color:'#8fa3c0',font:{size:9}},grid:{color:GRID_COLOR}},
+          y1:{type:'linear',position:'left', ticks:{color:'#059669',font:{size:9},callback:v=>(v*100).toFixed(1)+'%'},
+              grid:{color:GRID_COLOR},title:{display:true,text:'媒体展现率',color:'#059669',font:{size:9}}},
+          y2:{type:'linear',position:'right',ticks:{color:'#ea580c',font:{size:9},callback:v=>(v*100).toFixed(0)+'%'},
+              grid:{display:false},title:{display:true,text:'竞价率',color:'#ea580c',font:{size:9}}}
+        }
+      }
+    });
+  }
+
+  function renderQualityChart(activeDsp) {
+    const subset = activeDsp === '__all__' ? rows : rows.filter(r=>r.dsp===activeDsp);
+    const { internalWins, profitRates } = computeDayMetrics(subset);
+    const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+
+    document.getElementById('qualityTitle').textContent = `内部胜出率 & 利润率 · ${label}`;
+    mkChart('qualityChart',{
+      type:'line',
+      data:{ labels:dateLabels, datasets:[
+        { label:'内部胜出率', data:internalWins, yAxisID:'y1',
+          borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.06)',
+          fill: activeDsp !== '__all__',
+          pointRadius:3, borderWidth:1.9, tension:0.35 },
+        { label:'利润率', data:profitRates, yAxisID:'y2',
+          borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.06)',
+          fill: activeDsp !== '__all__',
+          pointRadius:3, borderWidth:1.9, tension:0.35 },
+      ]},
+      options:{ responsive:true, _divideAt:halfIdx,
+        plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:TOOLTIP_STYLE },
+        scales:{
+          x:{ticks:{color:'#8fa3c0',font:{size:9}},grid:{color:GRID_COLOR}},
+          y1:{type:'linear',position:'left', ticks:{color:'#2563eb',font:{size:9},callback:v=>(v*100).toFixed(1)+'%'},
+              grid:{color:GRID_COLOR},title:{display:true,text:'内部胜出率',color:'#2563eb',font:{size:9}}},
+          y2:{type:'linear',position:'right',ticks:{color:'#7c3aed',font:{size:9},callback:v=>(v*100).toFixed(1)+'%'},
+              grid:{display:false},title:{display:true,text:'利润率',color:'#7c3aed',font:{size:9}}}
+        }
+      }
+    });
+  }
+
+  function renderOptimizationMode(activeDsp) {
+    const subset = getSubsetStats(dspStats, activeDsp);
+    const bridgeSend = subset.reduce((sum, s) => sum + s.sendEffect, 0);
+    const bridgeRpm = subset.reduce((sum, s) => sum + s.rpmEffect, 0);
+    const mainDriver = Math.abs(bridgeRpm) >= Math.abs(bridgeSend) ? 'RPM驱动' : '发送量驱动';
+    const highVolumeLowEff = subset.filter(s => s.share >= 15 && (s.tw.rpm || 0) < fullMedianRpm).length;
+    const priceRaiseEffective = subset.filter(s => s.dspChg >= 5 && s.rpmChg >= 5).length;
+    const needFixCount = subset.filter(s => s.share >= 15 && s.rpmChg <= -5).length;
+
+    document.getElementById('optimizationKpiGrid').innerHTML = [
+      {
+        label:'收入变化主因',
+        val: mainDriver,
+        prev:`发送量:${fmtRev(Math.abs(bridgeSend))} / RPM:${fmtRev(Math.abs(bridgeRpm))}`,
+        chg: Math.abs(bridgeRpm) - Math.abs(bridgeSend),
+      },
+      {
+        label:'高量低效账户数',
+        val: String(highVolumeLowEff),
+        prev:`基准 RPM 中位数 ${fmt(fullMedianRpm,4)}`,
+        chg: highVolumeLowEff ? -highVolumeLowEff * 6 : 0,
+      },
+      {
+        label:'提价有效账户数',
+        val: String(priceRaiseEffective),
+        prev:'DSP出价≥+5% 且 RPM≥+5%',
+        chg: priceRaiseEffective ? priceRaiseEffective * 6 : 0,
+      },
+      {
+        label:'需优先修复账户数',
+        val: String(needFixCount),
+        prev:'收入占比≥15% 且 RPM≤-5%',
+        chg: needFixCount ? -needFixCount * 6 : 0,
+      }
+    ].map(k => {
+      const neg = k.chg < -1; const pos = k.chg > 1;
+      const cls = neg ? 'kc-neg' : pos ? 'kc-pos' : 'kc-neu';
+      const bcls = neg ? 'b-neg' : pos ? 'b-pos' : 'b-neu';
+      const vcls = neg ? 'var(--red2)' : pos ? 'var(--green2)' : 'var(--accent)';
+      const arrow = k.chg >= 0 ? '▲' : '▼';
+      return `<div class="kpi-card ${cls}">
+        <div class="kpi-label">${k.label}</div>
+        <div class="kpi-value" style="color:${vcls}">${k.val}</div>
+        <div class="kpi-meta">
+          <span class="kpi-prev">${k.prev}</span>
+          <span class="kpi-badge ${bcls}">${arrow} ${Math.abs(k.chg).toFixed(1)}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    const priorityRows = [...subset].sort((a,b) => Math.abs(b.actualChange) - Math.abs(a.actualChange));
+    document.getElementById('priorityTableBody').innerHTML = priorityRows.map(s => `
+      <tr>
+        <td><span class="dsp-tag"><span class="dsp-dot" style="background:${s.color}"></span>${s.dsp}</span></td>
+        <td>${fmt(s.share,1)}%</td>
+        <td class="${s.actualChange>=0?'hlg':'hlr'}">${s.actualChange>=0?'+':''}¥${fmtRev(Math.abs(s.actualChange))}</td>
+        <td class="${s.rpmChg>=0?'hlg':'hlr'}">${fmtDelta(s.rpmChg,1)}</td>
+        <td class="${s.cpmChg>=0?'hlg':'hlr'}">${fmtDelta(s.cpmChg,1)}</td>
+        <td class="${s.dspChg>=0?'hlg':'hlr'}">${fmtDelta(s.dspChg,1)}</td>
+        <td class="${s.bidChg>=0?'hlg':'hlr'}">${fmtDelta(s.bidChg,1)}</td>
+        <td class="${s.mediaChg>=0?'hlg':'hlr'}">${fmtDelta(s.mediaChg,1)}</td>
+        <td class="${s.ctrChg>=0?'hlg':'hlr'}">${fmtDelta(s.ctrChg,1)}</td>
+        <td><span class="diag-tag ${s.diag.cls}">${s.diag.text}</span></td>
+      </tr>
+    `).join('');
+
+    mkChart('revenueBridgeChart', {
+      type:'bar',
+      data:{
+        labels: priorityRows.map(s => s.dsp),
+        datasets:[
+          {
+            label:'发送量贡献', data: priorityRows.map(s => s.sendEffect), stack:'bridge',
+            backgroundColor:'rgba(37,99,235,0.48)', borderColor:'#2563eb', borderWidth:1, borderRadius:4
+          },
+          {
+            label:'RPM贡献', data: priorityRows.map(s => s.rpmEffect), stack:'bridge',
+            backgroundColor:'rgba(5,150,105,0.42)', borderColor:'#059669', borderWidth:1, borderRadius:4
+          },
+          {
+            type:'line', label:'真实收入变化', data: priorityRows.map(s => s.actualChange),
+            borderColor:'#e11d48', backgroundColor:'#e11d48', yAxisID:'y',
+            pointRadius:4, pointHoverRadius:5, tension:0.25, borderWidth:2.2
+          }
+        ]
+      },
+      options:{
+        responsive:true,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}},
+          tooltip:{...TOOLTIP_STYLE,callbacks:{label(c){
+            const v = c.raw || 0;
+            return `  ${c.dataset.label}: ${v>=0?'+':''}¥${Math.abs(v).toLocaleString('zh-CN',{maximumFractionDigits:0})}`;
+          }}}
+        },
+        scales:{
+          x:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR}},
+          y:{stacked:true,ticks:{color:'#4a5a78',font:{size:10},callback:v=>`${v<0?'-':''}¥${fmtRev(Math.abs(v))}`},grid:{color:GRID_COLOR},
+             title:{display:true,text:'收入变化(¥)',color:'#4a5a78',font:{size:10}}}
+        }
+      }
+    });
+    document.getElementById('bridgeMeta').textContent =
+      `当前筛选收入变化拆解：发送量贡献 ${bridgeSend>=0?'+':''}¥${fmtRev(Math.abs(bridgeSend))} · RPM贡献 ${bridgeRpm>=0?'+':''}¥${fmtRev(Math.abs(bridgeRpm))}`;
+
+    const maxBubbleRev = Math.max(...subset.map(s => s.tw.totalRev || 0), 1);
+    mkChart('bidResponseChart', {
+      type:'bubble',
+      data:{
+        datasets: subset.map(s => ({
+          label:s.dsp,
+          data:[{ x:s.dspChg, y:s.rpmChg, r:Math.max(7, Math.min(22, Math.sqrt((s.tw.totalRev || 0) / maxBubbleRev) * 22)) }],
+          backgroundColor:`${s.color}88`,
+          borderColor:s.color,
+          borderWidth:1.5
+        }))
+      },
+      options:{
+        responsive:true,
+        _quadrants:true,
+        plugins:{
+          legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}},
+          tooltip:{...TOOLTIP_STYLE,callbacks:{label(c){
+            const point = c.raw || { x:0, y:0 };
+            return `  ${c.dataset.label}: DSP出价 ${fmtDelta(point.x,1)} / RPM ${fmtDelta(point.y,1)}`;
+          }}}
+        },
+        scales:{
+          x:{ticks:{color:'#4a5a78',font:{size:10},callback:v=>`${v}%`},grid:{color:GRID_COLOR},
+             title:{display:true,text:'DSP出价环比',color:'#4a5a78',font:{size:10}}},
+          y:{ticks:{color:'#4a5a78',font:{size:10},callback:v=>`${v}%`},grid:{color:GRID_COLOR},
+             title:{display:true,text:'RPM环比',color:'#4a5a78',font:{size:10}}}
+        }
+      }
+    });
+
+    document.getElementById('rpmHeatmapBody').innerHTML = priorityRows.map(s => `
+      <tr>
+        <td class="heatmap-account"><span class="dsp-tag"><span class="dsp-dot" style="background:${s.color}"></span>${s.dsp}</span></td>
+        <td class="heat-cell ${metricToneClass(s.dspChg)}">${fmtDelta(s.dspChg,1)}</td>
+        <td class="heat-cell ${metricToneClass(s.bidChg)}">${fmtDelta(s.bidChg,1)}</td>
+        <td class="heat-cell ${metricToneClass(s.mediaChg)}">${fmtDelta(s.mediaChg,1)}</td>
+        <td class="heat-cell ${metricToneClass(s.ctrChg)}">${fmtDelta(s.ctrChg,1)}</td>
+        <td class="heat-cell ${metricToneClass(s.cpmChg)}">${fmtDelta(s.cpmChg,1)}</td>
+        <td class="heat-cell ${metricToneClass(s.rpmChg)}">${fmtDelta(s.rpmChg,1)}</td>
+      </tr>
+    `).join('');
+  }
+
+  // ── Build trend filter pills
+  const pillsEl = document.getElementById('filterPills');
+  const allPills = [{ key:'__all__', label:'全部汇总', color:'#2563eb' },
+                    ...uniqueDsps.map((dsp,i)=>({ key:dsp, label:dsp, color:DSP_COLORS[i%DSP_COLORS.length] }))];
+
+  pillsEl.innerHTML = allPills.map(p=>`
+    <button class="filter-pill ${p.key==='__all__'?'active':''}"
+            data-key="${p.key}"
+            onclick="handlePillClick(this,'${p.key}')">
+      <span class="pill-dot" style="background:${p.color}"></span>${p.label}
+    </button>`).join('');
+
+  // Global pill click handler
+  window.handlePillClick = function(el, key) {
+    document.querySelectorAll('#filterPills .filter-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    uiState.reportFilters.trend = key;
+    uiState.reportFilters.price = key;
+    uiState.reportFilters.rate = key;
+    uiState.reportFilters.quality = key;
+    document.querySelectorAll('#priceFilterPills .filter-pill').forEach(p=>p.classList.toggle('active', p.dataset.key === key));
+    document.querySelectorAll('#rateFilterPills .filter-pill').forEach(p=>p.classList.toggle('active', p.dataset.key === key));
+    document.querySelectorAll('#qualityFilterPills .filter-pill').forEach(p=>p.classList.toggle('active', p.dataset.key === key));
+    renderTrendCharts(key);
+    renderRateChart(key);
+    renderQualityChart(key);
+  };
+
+  const pricePillsEl = document.getElementById('priceFilterPills');
+  pricePillsEl.innerHTML = allPills.map(p=>`
+    <button class="filter-pill ${p.key==='__all__'?'active':''}"
+            data-key="${p.key}"
+            onclick="handlePricePillClick(this,'${p.key}')">
+      <span class="pill-dot" style="background:${p.color}"></span>${p.label}
+    </button>`).join('');
+
+  window.handlePricePillClick = function(el, key) {
+    document.querySelectorAll('#priceFilterPills .filter-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    uiState.reportFilters.price = key;
+    renderPriceChart(key);
+  };
+
+  const ratePillsEl = document.getElementById('rateFilterPills');
+  ratePillsEl.innerHTML = allPills.map(p=>`
+    <button class="filter-pill ${p.key==='__all__'?'active':''}"
+            data-key="${p.key}"
+            onclick="handleRatePillClick(this,'${p.key}')">
+      <span class="pill-dot" style="background:${p.color}"></span>${p.label}
+    </button>`).join('');
+
+  window.handleRatePillClick = function(el, key) {
+    document.querySelectorAll('#rateFilterPills .filter-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    uiState.reportFilters.rate = key;
+    renderRateChart(key);
+  };
+
+  const qualityPillsEl = document.getElementById('qualityFilterPills');
+  qualityPillsEl.innerHTML = allPills.map(p=>`
+    <button class="filter-pill ${p.key==='__all__'?'active':''}"
+            data-key="${p.key}"
+            onclick="handleQualityPillClick(this,'${p.key}')">
+      <span class="pill-dot" style="background:${p.color}"></span>${p.label}
+    </button>`).join('');
+
+  window.handleQualityPillClick = function(el, key) {
+    document.querySelectorAll('#qualityFilterPills .filter-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    uiState.reportFilters.quality = key;
+    renderQualityChart(key);
+  };
+
+  const optPillsEl = document.getElementById('optFilterPills');
+  optPillsEl.innerHTML = allPills.map(p=>`
+    <button class="filter-pill ${p.key==='__all__'?'active':''}"
+            data-key="${p.key}"
+            onclick="handleOptimizationPillClick(this,'${p.key}')">
+      <span class="pill-dot" style="background:${p.color}"></span>${p.label}
+    </button>`).join('');
+
+  window.handleOptimizationPillClick = function(el, key) {
+    document.querySelectorAll('#optFilterPills .filter-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    uiState.optFilter = key;
+    renderOptimizationMode(key);
+  };
+
+  function setMode(mode) {
+    uiState.currentMode = mode;
+    document.querySelectorAll('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    document.getElementById('reportModeView').classList.toggle('active', mode === 'report');
+    document.getElementById('optimizationModeView').classList.toggle('active', mode === 'optimization');
+    if (mode === 'optimization') {
+      requestAnimationFrame(() => renderOptimizationMode(uiState.optFilter));
+    }
+  }
+  window.handleModeSwitch = function(mode) { setMode(mode); };
+
+  // Initial render — all accounts
+  renderTrendCharts(uiState.reportFilters.trend);
+  renderPriceChart(uiState.reportFilters.price);
+  renderRateChart(uiState.reportFilters.rate);
+  renderQualityChart(uiState.reportFilters.quality);
+  setMode(uiState.currentMode);
+
+  // ── DSP Stats
+  const tbody = document.getElementById('dspTableBody');
+  tbody.innerHTML = dspStats.map(s => {
+    const revChg = pct(s.tw.totalRev, s.lw.totalRev);
+    const cpmChg = pct(s.tw.cpm, s.lw.cpm);
+    const dspChg = pct(s.tw.dspP, s.lw.dspP);
+    const medChg = pct(s.tw.media, s.lw.media);
+    const shareP = totalThisRev ? (s.tw.totalRev/totalThisRev*100).toFixed(1) : '0.0';
+    const sign = v => v>=0 ? `<span class="chg pos">▲ ${Math.abs(v).toFixed(1)}%</span>`
+                           : `<span class="chg neg">▼ ${Math.abs(v).toFixed(1)}%</span>`;
+    return `<tr>
+      <td><span class="dsp-tag"><span class="dsp-dot" style="background:${s.color}"></span>${s.dsp}</span></td>
+      <td>¥${fmtRev(s.lw.totalRev)}</td>
+      <td>¥${fmtRev(s.tw.totalRev)}</td>
+      <td>${sign(revChg)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${fmt(s.lw.cpm)} → ${fmt(s.tw.cpm)}</td>
+      <td>${sign(cpmChg)}</td>
+      <td>${sign(dspChg)}</td>
+      <td>${sign(s.internalWinChg)}</td>
+      <td>${sign(medChg)}</td>
+      <td><div style="font-size:11px;font-family:'DM Mono',monospace">${shareP}%</div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${shareP}%;background:${s.color}"></div></div></td>
+    </tr>`;
+  }).join('');
+
+  // ── DSP Revenue Bar Chart
+  mkChart('dspRevChart',{
+    type:'bar',
+    data:{ labels:dspStats.map(s=>s.dsp), datasets:[
+      { label:'上周', data:dspStats.map(s=>s.lw.totalRev),
+        backgroundColor:'rgba(100,116,139,0.3)', borderColor:'rgba(100,116,139,0.5)', borderWidth:1, borderRadius:4 },
+      { label:'本周', data:dspStats.map(s=>s.tw.totalRev),
+        backgroundColor:dspStats.map(s=>s.color+'88'), borderColor:dspStats.map(s=>s.color),
+        borderWidth:1, borderRadius:4 },
+    ]},
+    options:{ responsive:true,
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}},
+        tooltip:{...TOOLTIP_STYLE,callbacks:{label(c){return `  ¥${c.raw.toLocaleString('zh-CN',{maximumFractionDigits:0})}`;}}
+      }},
+      scales:{
+        x:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR}},
+        y:{ticks:{color:'#4a5a78',font:{size:10},callback:v=>(v/10000).toFixed(0)+'万'},grid:{color:GRID_COLOR}}
+      }
+    }
+  });
+
+  // ── DSP CPM Change Bar
+  const cpmChanges = dspStats.map(s => pct(s.tw.cpm,s.lw.cpm));
+  mkChart('dspCpmChart',{
+    type:'bar',
+    data:{ labels:dspStats.map(s=>s.dsp), datasets:[{
+      label:'CPM环比变化(%)', data:cpmChanges,
+      backgroundColor:cpmChanges.map(v=>v>=0?'rgba(5,150,105,0.35)':'rgba(225,29,72,0.35)'),
+      borderColor:cpmChanges.map(v=>v>=0?'#059669':'#e11d48'),
+      borderWidth:1.5, borderRadius:4
+    }]},
+    options:{ responsive:true,
+      plugins:{ legend:{display:false}, tooltip:{...TOOLTIP_STYLE,
+        callbacks:{label(c){return `  ${c.raw>=0?'▲':'▼'} ${Math.abs(c.raw).toFixed(1)}%`;}}
+      }},
+      scales:{
+        x:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR}},
+        y:{ticks:{color:'#4a5a78',font:{size:10},callback:v=>v+'%'},grid:{color:GRID_COLOR},
+           title:{display:true,text:'CPM变化率(%)',color:'#4a5a78',font:{size:10}}}
+      }
+    }
+  });
+
+  const causeGridEl = document.getElementById('causeGrid');
+  if (causeGridEl) {
+  // ── Cause Analysis (auto-generated)
+  const biggestDrop = [...dspStats].filter(s=>s.lw.totalRev>0).sort((a,b)=>pct(a.tw.totalRev,a.lw.totalRev)-pct(b.tw.totalRev,b.lw.totalRev))[0];
+  const biggestGain = [...dspStats].filter(s=>s.lw.totalRev>0).sort((a,b)=>pct(b.tw.totalRev,b.lw.totalRev)-pct(a.tw.totalRev,a.lw.totalRev))[0];
+  const peakInLW = lastWeekDates.includes(peakDay.dateStr);
+  const rpmDir   = TW.rpm < LW.rpm ? '下降' : '上升';
+  const sendDir  = TW.totalSend > LW.totalSend ? '增加' : '减少';
+
+  const causes = [];
+  // Cause 1: biggest drop DSP
+  if (biggestDrop && pct(biggestDrop.tw.totalRev,biggestDrop.lw.totalRev) < -5) {
+    const rc = pct(biggestDrop.tw.totalRev,biggestDrop.lw.totalRev);
+    const dc = pct(biggestDrop.tw.dspP,biggestDrop.lw.dspP);
+    const cc = pct(biggestDrop.tw.cpm,biggestDrop.lw.cpm);
+    causes.push({
+      icon:'🔴', color:'rgba(225,29,72,0.22)',
+      title:`${biggestDrop.dsp} 出价大幅收缩是最大拖累`,
+      body:`${biggestDrop.dsp} 上周贡献总收入约 <strong>${(biggestDrop.lw.totalRev/LW.totalRev*100).toFixed(1)}%</strong>，
+           是矩阵中的重要账户。本周DSP出价从 <strong>${fmt(biggestDrop.lw.dspP)}</strong> → <strong>${fmt(biggestDrop.tw.dspP)}</strong>
+           (${fmt(dc,1)}%)，直接导致竞价获胜质量下降，成交CPM随之变化 ${fmt(cc,1)}%，单账户收入缺口约 ¥${fmtRev(biggestDrop.lw.totalRev-biggestDrop.tw.totalRev)}。`,
+      data:`${biggestDrop.dsp} DSP出价：${fmt(biggestDrop.lw.dspP)} → ${fmt(biggestDrop.tw.dspP)}（${dc>=0?'+':''}${fmt(dc,1)}%）\n${biggestDrop.dsp} CPM：${fmt(biggestDrop.lw.cpm)} → ${fmt(biggestDrop.tw.cpm)}（${cc>=0?'+':''}${fmt(cc,1)}%）\n收入缺口：约 ¥${fmtRev(biggestDrop.lw.totalRev-biggestDrop.tw.totalRev)}`
+    });
+  }
+  // Cause 2: peak day base effect
+  if (peakInLW && peakDay.rev / LW.totalRev > 0.15) {
+    const exclusiveAvg = (LW.totalRev - peakDay.rev) / (lastWeekDates.length - 1);
+    const thisAvg = TW.totalRev / thisWeekDates.length;
+    causes.push({
+      icon:'🟡', color:'rgba(217,119,6,0.2)',
+      title:`${peakLabel} 峰值拉高了上周基数`,
+      body:`${peakLabel} 单日收入高达 <strong>¥${peakDay.rev.toLocaleString('zh-CN',{maximumFractionDigits:0})}</strong>，
+           占上周总收入的 <strong>${peakShare}%</strong>，约为正常日均的 ${(peakDay.rev/exclusiveAvg).toFixed(1)} 倍。
+           剔除该极端值后，上周实际日均约 <strong>¥${fmtRev(exclusiveAvg)}</strong>，
+           与本周日均 <strong>¥${fmtRev(thisAvg)}</strong> ${Math.abs(pct(thisAvg,exclusiveAvg))<10?'基本持平':'存在差距'}，
+           实际经营基本面${Math.abs(pct(thisAvg,exclusiveAvg))<10?'并未明显恶化':'仍有改善空间'}。`,
+      data:`${peakLabel} 单日收入：¥${peakDay.rev.toLocaleString('zh-CN',{maximumFractionDigits:0})}（占上周${peakShare}%）\n剔除后上周日均：¥${fmtRev(exclusiveAvg)}\n本周日均：¥${fmtRev(thisAvg)}`
+    });
+  }
+  // Cause 3: CTR drop
+  if (pct(TW.ctr,LW.ctr) < -3) {
+    causes.push({
+      icon:'🔴', color:'rgba(225,29,72,0.15)',
+      title:'整体CTR下滑 · 素材/人群效率衰退',
+      body:`全账户加权点击率从 <strong>${fmt(LW.ctr*100,2)}%</strong> → <strong>${fmt(TW.ctr*100,2)}%</strong>（${fmt(pct(TW.ctr,LW.ctr),1)}%）。
+           CTR下降会造成系统质量分降低，进而降低同等出价下的竞价权重，
+           形成"出价未变但实际竞争力下降"的隐性损失。建议优先更新CTR表现最差的素材组。`,
+      data:`全账户CTR：${fmt(LW.ctr*100,2)}% → ${fmt(TW.ctr*100,2)}%（${fmt(pct(TW.ctr,LW.ctr),1)}%）\n质量分下降 → 竞价权重隐性损失`
+    });
+  }
+  // Cause 4: send up but RPM down
+  if (TW.totalSend > LW.totalSend && TW.rpm < LW.rpm) {
+    causes.push({
+      icon:'🔵', color:'rgba(37,99,235,0.12)',
+      title:'发送量增加但变现效率下降',
+      body:`发送量环比${sendDir} <strong>${fmt(pct(TW.totalSend,LW.totalSend),1)}%</strong>，
+           但千次发送收入（RPM）从 <strong>${fmt(LW.rpm,4)}</strong> → <strong>${fmt(TW.rpm,4)}</strong>（${fmt(pct(TW.rpm,LW.rpm),1)}%）。
+           这一"量增价降"的背离说明平台给了更多流量机会，但账户竞价能力和素材质量未能有效转化。`,
+      data:`发送量：${pct(TW.totalSend,LW.totalSend)>=0?'+':''}${fmt(pct(TW.totalSend,LW.totalSend),1)}%\n千次收入(RPM)：${fmt(LW.rpm,4)} → ${fmt(TW.rpm,4)}（${fmt(pct(TW.rpm,LW.rpm),1)}%）`
+    });
+  }
+  // Cause 5: media rate drop
+  if (pct(TW.media,LW.media) < -5) {
+    causes.push({
+      icon:'🟠', color:'rgba(234,88,12,0.12)',
+      title:'媒体展现率下降 · 有效库存减少',
+      body:`全账户媒体展现率从 <strong>${fmt(LW.media*100,2)}%</strong> → <strong>${fmt(TW.media*100,2)}%</strong>（${fmt(pct(TW.media,LW.media),1)}%）。
+           展现率下降意味着赢得竞价后实际展现的比例降低，
+           可能与广告位库存竞争加剧或定向人群覆盖范围收窄有关。`,
+      data:`媒体展现率：${fmt(LW.media*100,2)}% → ${fmt(TW.media*100,2)}%（${fmt(pct(TW.media,LW.media),1)}%）`
+    });
+  }
+  // Cause 6: bright spot
+  if (biggestGain && pct(biggestGain.tw.totalRev,biggestGain.lw.totalRev) > 5) {
+    const gc = pct(biggestGain.tw.totalRev,biggestGain.lw.totalRev);
+    const gcc = pct(biggestGain.tw.cpm,biggestGain.lw.cpm);
+    causes.push({
+      icon:'🟢', color:'rgba(5,150,105,0.15)',
+      title:`亮点：${biggestGain.dsp} 逆势增长值得关注`,
+      body:`${biggestGain.dsp} 是本周正向账户，收入 <strong>+${fmt(gc,1)}%</strong>，
+           CPM变化 <strong>${gcc>=0?'+':''}${fmt(gcc,1)}%</strong>，
+           说明该账户出价与流量匹配策略方向正确。
+           虽然绝对体量（${fmt(biggestGain.tw.totalRev/totalThisRev*100,1)}%）有限，其经验可作为其他账户优化的参考样本。`,
+      data:`${biggestGain.dsp} 收入：+${fmt(gc,1)}%\n${biggestGain.dsp} CPM：${gcc>=0?'+':''}${fmt(gcc,1)}%\n可参考：出价策略 & 人群定向模式`
+    });
+  }
+
+  causeGridEl.innerHTML = causes.map((c,i)=>`
+    <div class="cause-card" style="border-color:${c.color}">
+      <div class="cause-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="cause-title">${c.icon} ${c.title}</div>
+      <div class="cause-body">${c.body}</div>
+      <div class="cause-data">${c.data.replace(/\n/g,'<br>')}</div>
+    </div>`).join('');
+
+  }
+
+  // ── Footer
+  document.getElementById('footerLeft').textContent =
+    `DSP · 各账户预算周报 W${weekNum} · ${today.toISOString().slice(0,10)} 生成`;
+  document.getElementById('footerRight').textContent =
+    `数据来源：后台导出 · 账户矩阵：${uniqueDsps.join(' / ')}`;
+
+  // ── Store parsed data globally for export
+  window._reportState = {
+    rows: rows.map(r => ({
+      ...r,
+      date: r.date.toISOString(),   // serialize Date
+    })),
+    weekNum,
+    todayStr: today.toISOString().slice(0,10),
+    uniqueDates, uniqueDsps,
+    lastWeekDates, thisWeekDates,
+    optionalFields,
+    availableOptionalFields: optionalFieldNames(optionalFields),
+    uiState,
+  };
+
+  // ── Switch screens
+  document.getElementById('inputScreen').style.display  = 'none';
+  document.getElementById('reportScreen').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
+function backToInput() {
+  document.getElementById('reportScreen').style.display = 'none';
+  document.getElementById('inputScreen').style.display  = 'flex';
+}
+
+function loadDemoData() {
+  document.getElementById('dataInput').value = DEMO;
+}
+
+/* ─────────────────────────────────────────
+   EXPORT — build a fully self-contained
+   standalone HTML with data embedded
+───────────────────────────────────────── */
+function exportReport() {
+  const state = window._reportState;
+  if (!state) { alert('请先生成报告再导出'); return; }
+
+  const btn = document.querySelector('.btn-export');
+  btn.textContent = '生成中…'; btn.disabled = true;
+
+  // Grab inline styles from <style> tags in this document
+  const styles = Array.from(document.querySelectorAll('style'))
+                      .map(s => s.innerHTML).join('\n');
+  const reportClone = document.getElementById('reportScreen').cloneNode(true);
+  reportClone.querySelectorAll('.mode-view').forEach(el => el.classList.remove('active'));
+  reportClone.querySelector('#reportModeView')?.classList.add('active');
+  reportClone.querySelectorAll('.mode-tab').forEach(btnEl => btnEl.classList.toggle('active', btnEl.dataset.mode === 'report'));
+  function freezeCanvasChart(id) {
+    const source = document.getElementById(id);
+    const target = reportClone.querySelector('#' + id);
+    if (!source || !target) return;
+    try {
+      const img = document.createElement('img');
+      img.src = source.toDataURL('image/png');
+      img.alt = id;
+      img.style.display = 'block';
+      img.style.width = '100%';
+      img.style.height = 'auto';
+      img.style.maxHeight = '360px';
+      img.style.objectFit = 'contain';
+      target.replaceWith(img);
+    } catch (err) {
+      // Keep the canvas in place; the standalone script will try to redraw it.
+    }
+  }
+  ['dspRevChart','dspCpmChart'].forEach(freezeCanvasChart);
+  const reportHTML = reportClone.outerHTML;
+  const standaloneScript = `
+const EMBEDDED_STATE = ${JSON.stringify(state)};
+const rows = EMBEDDED_STATE.rows.map(function(r){ return Object.assign({}, r, { date:new Date(r.date) }); });
+const uiState = EMBEDDED_STATE.uiState || { currentMode:'report', reportFilters:{ trend:'__all__', price:'__all__', rate:'__all__', quality:'__all__' }, optFilter:'__all__' };
+uiState.currentMode = 'report';
+const uniqueDates = EMBEDDED_STATE.uniqueDates;
+const uniqueDsps = EMBEDDED_STATE.uniqueDsps;
+const lastWeekDates = EMBEDDED_STATE.lastWeekDates;
+const thisWeekDates = EMBEDDED_STATE.thisWeekDates;
+const lastWeekRows = rows.filter(function(r){ return lastWeekDates.includes(r.dateStr); });
+const thisWeekRows = rows.filter(function(r){ return thisWeekDates.includes(r.dateStr); });
+const dateLabels = uniqueDates.map(function(s){ return s.slice(5).replace('-','/'); });
+const halfIdx = lastWeekDates.length;
+const DSP_COLORS = ['#ef4444','#f59e0b','#8b5cf6','#10b981','#06b6d4','#f97316','#ec4899','#3b82f6'];
+const GRID_COLOR = '#eef1f8';
+const TOOLTIP_STYLE = { backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78' };
+const chartInstances = {};
+function destroyChart(id) { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } }
+function mkChart(id, config) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  destroyChart(id);
+  chartInstances[id] = new Chart(el.getContext('2d'), config);
+}
+function agg(items) {
+  if (!items.length) return {};
+  const totalRev = items.reduce(function(s,r){ return s + r.rev; }, 0);
+  const totalSend = items.reduce(function(s,r){ return s + r.send; }, 0);
+  return {
+    totalRev: totalRev,
+    totalSend: totalSend,
+    cpm: totalRev ? items.reduce(function(s,r){ return s + r.cpm * r.rev; }, 0) / totalRev : 0,
+    dspP: totalRev ? items.reduce(function(s,r){ return s + r.dspP * r.rev; }, 0) / totalRev : 0,
+    bidRate: totalSend ? items.reduce(function(s,r){ return s + r.bidRate * r.send; }, 0) / totalSend : 0,
+    internalWin: totalSend ? items.reduce(function(s,r){ return s + (r.internalWin || 0) * r.send; }, 0) / totalSend : 0,
+    media: totalSend ? items.reduce(function(s,r){ return s + r.media * r.send; }, 0) / totalSend : 0,
+    ctr: totalSend ? items.reduce(function(s,r){ return s + r.ctr * r.send; }, 0) / totalSend : 0,
+    profitRate: totalRev ? items.reduce(function(s,r){ return s + (r.profitRate || 0) * r.rev; }, 0) / totalRev : 0,
+    rpm: totalSend ? totalRev / totalSend * 1000 : 0
+  };
+}
+function pct(a,b) { return b ? ((a-b)/b*100) : 0; }
+function fmt(n,d) { return Number(n || 0).toFixed(d == null ? 2 : d); }
+function fmtRev(n) { return Math.abs(n) >= 10000 ? (Math.abs(n)/10000).toFixed(1) + '万' : Math.abs(n).toFixed(0); }
+function median(values) {
+  if (!values.length) return 0;
+  const arr = values.slice().sort(function(a,b){ return a-b; });
+  const mid = Math.floor(arr.length / 2);
+  return arr.length % 2 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+}
+function metricToneClass(v) {
+  if (v <= -5) return 'heat-neg';
+  if (v >= 5) return 'heat-pos';
+  return 'heat-neu';
+}
+function fmtDelta(v,d) { return (v >= 0 ? '+' : '') + fmt(v, d == null ? 1 : d) + '%'; }
+function calcBridgeEffect(tw, lw) {
+  const sendEffect = ((tw.totalSend || 0) - (lw.totalSend || 0)) * ((lw.rpm || 0) / 1000);
+  const rpmEffect = (tw.totalSend || 0) * (((tw.rpm || 0) - (lw.rpm || 0)) / 1000);
+  return { sendEffect: sendEffect, rpmEffect: rpmEffect, totalEffect: sendEffect + rpmEffect };
+}
+function buildOptimizationStats(dsps, lwRows, twRows, totalThisRev) {
+  return dsps.map(function(dsp, i){
+    const lw = agg(lwRows.filter(function(r){ return r.dsp === dsp; }));
+    const tw = agg(twRows.filter(function(r){ return r.dsp === dsp; }));
+    const share = totalThisRev ? (tw.totalRev / totalThisRev * 100) : 0;
+    const bridge = calcBridgeEffect(tw, lw);
+    return {
+      dsp: dsp,
+      color: DSP_COLORS[i % DSP_COLORS.length],
+      lw: lw,
+      tw: tw,
+      share: share,
+      revChg: pct(tw.totalRev, lw.totalRev),
+      rpmChg: pct(tw.rpm, lw.rpm),
+      cpmChg: pct(tw.cpm, lw.cpm),
+      dspChg: pct(tw.dspP, lw.dspP),
+      bidChg: pct(tw.bidRate, lw.bidRate),
+      internalWinChg: pct(tw.internalWin, lw.internalWin),
+      mediaChg: pct(tw.media, lw.media),
+      ctrChg: pct(tw.ctr, lw.ctr),
+      actualChange: (tw.totalRev || 0) - (lw.totalRev || 0),
+      sendEffect: bridge.sendEffect,
+      rpmEffect: bridge.rpmEffect,
+      totalEffect: bridge.totalEffect
+    };
+  });
+}
+function getDiagnosticLabel(stat, medianRpm) {
+  if (stat.share >= 15 && stat.rpmChg <= -5) return { text:'该修复', cls:'diag-fix' };
+  if ((stat.tw.rpm || 0) >= medianRpm && stat.rpmChg >= 5) return { text:'该放量', cls:'diag-scale' };
+  if ((stat.tw.rpm || 0) < medianRpm && stat.revChg <= -10) return { text:'降权', cls:'diag-down' };
+  if (stat.share < 10 && (stat.tw.rpm || 0) >= medianRpm) return { text:'观察', cls:'diag-watch' };
+  return { text:'稳定', cls:'diag-stable' };
+}
+function getSubsetStats(stats, key) { return key === '__all__' ? stats : stats.filter(function(s){ return s.dsp === key; }); }
+function activatePill(containerId, key) {
+  const root = document.getElementById(containerId);
+  if (!root) return;
+  root.querySelectorAll('.filter-pill').forEach(function(btn){ btn.classList.toggle('active', btn.getAttribute('data-key') === key); });
+}
+Chart.defaults.color = '#4a5a78';
+Chart.defaults.borderColor = '#dde3f0';
+Chart.defaults.font.family = "'DM Mono', monospace";
+const weekDivPlugin = {
+  id:'weekDiv',
+  afterDraw(chart) {
+    if (!chart.config.options || !chart.config.options._divideAt) return;
+    const xScale = chart.scales.x;
+    if (!xScale) return;
+    const div = chart.config.options._divideAt;
+    const x = (xScale.getPixelForValue(div - 1) + xScale.getPixelForValue(div)) / 2;
+    const ctx = chart.ctx;
+    const area = chart.chartArea;
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, area.top); ctx.lineTo(x, area.bottom); ctx.stroke();
+    ctx.font = '10px DM Mono,monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.textAlign = 'center';
+    ctx.fillText('上周 | 本周', x, area.top + 12);
+    ctx.restore();
+  }
+};
+const quadrantGuidePlugin = {
+  id:'quadrantGuide',
+  afterDraw(chart) {
+    if (!chart.config.options || !chart.config.options._quadrants) return;
+    const ctx = chart.ctx;
+    const area = chart.chartArea;
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    if (!xScale || !yScale) return;
+    const xZero = xScale.getPixelForValue(0);
+    const yZero = yScale.getPixelForValue(0);
+    ctx.save();
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = 'rgba(100,116,139,0.5)';
+    ctx.lineWidth = 1;
+    if (xZero >= area.left && xZero <= area.right) { ctx.beginPath(); ctx.moveTo(xZero, area.top); ctx.lineTo(xZero, area.bottom); ctx.stroke(); }
+    if (yZero >= area.top && yZero <= area.bottom) { ctx.beginPath(); ctx.moveTo(area.left, yZero); ctx.lineTo(area.right, yZero); ctx.stroke(); }
+    ctx.restore();
+  }
+};
+Chart.register(weekDivPlugin, quadrantGuidePlugin);
+function computeDayMetrics(filteredRows) {
+  const fm = {};
+  filteredRows.forEach(function(r){
+    if (!fm[r.dateStr]) fm[r.dateStr] = [];
+    fm[r.dateStr].push(r);
+  });
+  return {
+    revs: uniqueDates.map(function(d){ const dr = fm[d]; return dr ? dr.reduce(function(s,r){ return s + r.rev; }, 0) : 0; }),
+    cpms: uniqueDates.map(function(d){ const dr = fm[d]; if (!dr) return 0; const tr = dr.reduce(function(s,r){ return s + r.rev; }, 0); return tr ? dr.reduce(function(s,r){ return s + r.cpm * r.rev; }, 0) / tr : 0; }),
+    rpms: uniqueDates.map(function(d){ const dr = fm[d]; if (!dr) return 0; const ts = dr.reduce(function(s,r){ return s + r.send; }, 0); const tr = dr.reduce(function(s,r){ return s + r.rev; }, 0); return ts ? tr / ts * 1000 : 0; }),
+    medias: uniqueDates.map(function(d){ const dr = fm[d]; if (!dr) return 0; const ts = dr.reduce(function(s,r){ return s + r.send; }, 0); return ts ? dr.reduce(function(s,r){ return s + r.media * r.send; }, 0) / ts : 0; }),
+    bids: uniqueDates.map(function(d){ const dr = fm[d]; if (!dr) return 0; const ts = dr.reduce(function(s,r){ return s + r.send; }, 0); return ts ? dr.reduce(function(s,r){ return s + r.bidRate * r.send; }, 0) / ts : 0; }),
+    internalWins: uniqueDates.map(function(d){ const dr = fm[d]; if (!dr) return 0; const ts = dr.reduce(function(s,r){ return s + r.send; }, 0); return ts ? dr.reduce(function(s,r){ return s + (r.internalWin || 0) * r.send; }, 0) / ts : 0; }),
+    profitRates: uniqueDates.map(function(d){ const dr = fm[d]; if (!dr) return 0; const tr = dr.reduce(function(s,r){ return s + r.rev; }, 0); return tr ? dr.reduce(function(s,r){ return s + (r.profitRate || 0) * r.rev; }, 0) / tr : 0; })
+  };
+}
+const dspDayMap = {};
+uniqueDsps.forEach(function(dsp){
+  dspDayMap[dsp] = uniqueDates.map(function(d){
+    const dr = rows.filter(function(r){ return r.dateStr === d && r.dsp === dsp; });
+    if (!dr.length) return null;
+    const tr = dr.reduce(function(s,r){ return s + r.rev; }, 0);
+    return tr ? dr.reduce(function(s,r){ return s + r.dspP * r.rev; }, 0) / tr : 0;
+  });
+});
+const totalThisRev = agg(thisWeekRows).totalRev || 0;
+const fullStats = buildOptimizationStats(uniqueDsps, lastWeekRows, thisWeekRows, totalThisRev);
+const fullMedianRpm = median(fullStats.map(function(s){ return s.tw.rpm || 0; }).filter(function(v){ return v > 0; }));
+const dspStats = fullStats.map(function(s){ return Object.assign({}, s, { diag:getDiagnosticLabel(s, fullMedianRpm) }); }).sort(function(a,b){ return b.tw.totalRev - a.tw.totalRev; });
+function renderAccountBreakdownCharts() {
+  if (document.getElementById('dspRevChart')) {
+    mkChart('dspRevChart', {
+      type:'bar',
+      data:{ labels:dspStats.map(function(s){ return s.dsp; }), datasets:[
+        { label:'上周', data:dspStats.map(function(s){ return s.lw.totalRev; }), backgroundColor:'rgba(100,116,139,0.3)', borderColor:'rgba(100,116,139,0.5)', borderWidth:1, borderRadius:4 },
+        { label:'本周', data:dspStats.map(function(s){ return s.tw.totalRev; }), backgroundColor:dspStats.map(function(s){ return s.color + '88'; }), borderColor:dspStats.map(function(s){ return s.color; }), borderWidth:1, borderRadius:4 }
+      ]},
+      options:{
+        responsive:true,
+        plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:{ backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78', callbacks:{ label:function(c){ return '  ¥' + Number(c.raw || 0).toLocaleString('zh-CN',{maximumFractionDigits:0}); } } } },
+        scales:{ x:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR}}, y:{ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return (v / 10000).toFixed(0) + '万'; }},grid:{color:GRID_COLOR}} }
+      }
+    });
+  }
+  if (document.getElementById('dspCpmChart')) {
+    const cpmChanges = dspStats.map(function(s){ return pct(s.tw.cpm, s.lw.cpm); });
+    mkChart('dspCpmChart', {
+      type:'bar',
+      data:{ labels:dspStats.map(function(s){ return s.dsp; }), datasets:[{
+        label:'CPM环比变化(%)',
+        data:cpmChanges,
+        backgroundColor:cpmChanges.map(function(v){ return v >= 0 ? 'rgba(5,150,105,0.35)' : 'rgba(225,29,72,0.35)'; }),
+        borderColor:cpmChanges.map(function(v){ return v >= 0 ? '#059669' : '#e11d48'; }),
+        borderWidth:1.5,
+        borderRadius:4
+      }]},
+      options:{
+        responsive:true,
+        plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78', callbacks:{ label:function(c){ const v = Number(c.raw || 0); return '  ' + (v >= 0 ? '▲' : '▼') + ' ' + Math.abs(v).toFixed(1) + '%'; } } } },
+        scales:{ x:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR}}, y:{ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return v + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'CPM变化率(%)',color:'#4a5a78',font:{size:10}}} }
+      }
+    });
+  }
+}
+function renderTrendCharts(activeDsp) {
+  const subset = activeDsp === '__all__' ? rows : rows.filter(function(r){ return r.dsp === activeDsp; });
+  const series = computeDayMetrics(subset);
+  const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+  const idx = uniqueDsps.indexOf(activeDsp);
+  const dspColor = activeDsp === '__all__' ? '#2563eb' : DSP_COLORS[idx % DSP_COLORS.length];
+  const titleEl = document.getElementById('trendChartTitle');
+  const priceTitleEl = document.getElementById('dspPriceTitle');
+  if (titleEl) titleEl.textContent = '每日收入 & 加权CPM & 千次发送收入 · ' + label;
+  if (priceTitleEl) priceTitleEl.textContent = activeDsp === '__all__' ? 'DSP平均出价 · 各账户14日走势' : 'DSP平均出价 · ' + label + ' 14日走势';
+  mkChart('trendChart', {
+    type:'bar',
+    data:{ labels:dateLabels, datasets:[
+      { type:'line', label:'加权CPM', data:series.cpms, yAxisID:'yCPM', borderColor:'#d97706', backgroundColor:'transparent', pointBackgroundColor:'#d97706', pointRadius:4, borderWidth:2.2, tension:0.35, order:1 },
+      { type:'line', label:'千次发送收入', data:series.rpms, yAxisID:'yRPM', borderColor:'#059669', backgroundColor:'transparent', pointBackgroundColor:'#059669', pointRadius:4, borderWidth:2.2, tension:0.35, order:1 },
+      { type:'bar', label:'收入(¥)', data:series.revs, yAxisID:'yRev', backgroundColor:series.revs.map(function(_,i){ return i < halfIdx ? dspColor + '26' : dspColor + '6a'; }), borderColor:series.revs.map(function(_,i){ return i < halfIdx ? dspColor + '50' : dspColor + 'bb'; }), borderWidth:1, borderRadius:4, order:2 }
+    ]},
+    options:{
+      responsive:true, _divideAt:halfIdx, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:11},boxWidth:12}}, tooltip:TOOLTIP_STYLE },
+      scales:{
+        x:{ticks:{color:'#8fa3c0',font:{size:10}},grid:{color:GRID_COLOR}},
+        yCPM:{type:'linear',position:'left',ticks:{color:'#d97706',font:{size:10}},grid:{color:GRID_COLOR},title:{display:true,text:'CPM',color:'#d97706',font:{size:10}}},
+        yRPM:{type:'linear',position:'right',grid:{display:false},ticks:{color:'#059669',font:{size:10},callback:function(v){ return Number(v).toFixed(4); }},title:{display:true,text:'千次发送收入',color:'#059669',font:{size:10}}},
+        yRev:{type:'linear',position:'right',grid:{display:false},ticks:{color:dspColor,font:{size:10},callback:function(v){ return v >= 1000 ? (v/1000).toFixed(0) + 'k' : v; }},title:{display:true,text:'收入(¥)',color:dspColor,font:{size:10}}}
+      }
+    }
+  });
+  renderPriceChart(activeDsp);
+}
+function renderPriceChart(activeDsp) {
+  const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+  const idx = uniqueDsps.indexOf(activeDsp);
+  const dspColor = activeDsp === '__all__' ? '#2563eb' : DSP_COLORS[idx % DSP_COLORS.length];
+  const priceTitleEl = document.getElementById('dspPriceTitle');
+  if (priceTitleEl) priceTitleEl.textContent = activeDsp === '__all__' ? 'DSP平均出价 · 各账户14日走势' : 'DSP平均出价 · ' + label + ' 14日走势';
+  const priceDatasets = activeDsp === '__all__'
+    ? uniqueDsps.map(function(dsp,i){ return { label:dsp, data:dspDayMap[dsp], borderColor:DSP_COLORS[i%DSP_COLORS.length], backgroundColor:'transparent', pointRadius:3, borderWidth:1.8, tension:0.35, spanGaps:true }; })
+    : [{ label:activeDsp, data:dspDayMap[activeDsp], borderColor:dspColor, backgroundColor:dspColor + '18', fill:true, pointRadius:4, pointBackgroundColor:dspColor, borderWidth:2.2, tension:0.35, spanGaps:true }];
+  mkChart('dspPriceChart', {
+    type:'line',
+    data:{ labels:dateLabels, datasets:priceDatasets },
+    options:{
+      responsive:true, _divideAt:halfIdx,
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:TOOLTIP_STYLE },
+      scales:{ x:{ticks:{color:'#8fa3c0',font:{size:9}},grid:{color:GRID_COLOR}}, y:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR},title:{display:true,text:'DSP出价',color:'#4a5a78',font:{size:10}}} }
+    }
+  });
+}
+function renderRateChart(activeDsp) {
+  const subset = activeDsp === '__all__' ? rows : rows.filter(function(r){ return r.dsp === activeDsp; });
+  const series = computeDayMetrics(subset);
+  const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+  const titleEl = document.getElementById('rateTitle');
+  if (titleEl) titleEl.textContent = '媒体展现率 & 竞价率 · ' + label;
+  mkChart('rateChart', {
+    type:'line',
+    data:{ labels:dateLabels, datasets:[
+      { label:'媒体展现率', data:series.medias, yAxisID:'y1', borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.06)', fill:activeDsp !== '__all__', pointRadius:3, borderWidth:1.8, tension:0.35 },
+      { label:'竞价率', data:series.bids, yAxisID:'y2', borderColor:'#ea580c', backgroundColor:'rgba(234,88,12,0.06)', fill:activeDsp !== '__all__', pointRadius:3, borderWidth:1.8, tension:0.35 }
+    ]},
+    options:{
+      responsive:true, _divideAt:halfIdx,
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:TOOLTIP_STYLE },
+      scales:{
+        x:{ticks:{color:'#8fa3c0',font:{size:9}},grid:{color:GRID_COLOR}},
+        y1:{type:'linear',position:'left',ticks:{color:'#059669',font:{size:9},callback:function(v){ return (v*100).toFixed(1) + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'媒体展现率',color:'#059669',font:{size:9}}},
+        y2:{type:'linear',position:'right',ticks:{color:'#ea580c',font:{size:9},callback:function(v){ return (v*100).toFixed(0) + '%'; }},grid:{display:false},title:{display:true,text:'竞价率',color:'#ea580c',font:{size:9}}}
+      }
+    }
+  });
+}
+function renderQualityChart(activeDsp) {
+  const subset = activeDsp === '__all__' ? rows : rows.filter(function(r){ return r.dsp === activeDsp; });
+  const series = computeDayMetrics(subset);
+  const label = activeDsp === '__all__' ? '全部账户' : activeDsp;
+  const titleEl = document.getElementById('qualityTitle');
+  if (titleEl) titleEl.textContent = '内部胜出率 & 利润率 · ' + label;
+  mkChart('qualityChart', {
+    type:'line',
+    data:{ labels:dateLabels, datasets:[
+      { label:'内部胜出率', data:series.internalWins, yAxisID:'y1', borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.06)', fill:activeDsp !== '__all__', pointRadius:3, borderWidth:1.9, tension:0.35 },
+      { label:'利润率', data:series.profitRates, yAxisID:'y2', borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.06)', fill:activeDsp !== '__all__', pointRadius:3, borderWidth:1.9, tension:0.35 }
+    ]},
+    options:{
+      responsive:true, _divideAt:halfIdx,
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:TOOLTIP_STYLE },
+      scales:{
+        x:{ticks:{color:'#8fa3c0',font:{size:9}},grid:{color:GRID_COLOR}},
+        y1:{type:'linear',position:'left',ticks:{color:'#2563eb',font:{size:9},callback:function(v){ return (v*100).toFixed(1) + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'内部胜出率',color:'#2563eb',font:{size:9}}},
+        y2:{type:'linear',position:'right',ticks:{color:'#7c3aed',font:{size:9},callback:function(v){ return (v*100).toFixed(1) + '%'; }},grid:{display:false},title:{display:true,text:'利润率',color:'#7c3aed',font:{size:9}}}
+      }
+    }
+  });
+}
+function renderOptimizationMode(activeDsp) {
+  const subset = getSubsetStats(dspStats, activeDsp);
+  const bridgeSend = subset.reduce(function(sum, s){ return sum + s.sendEffect; }, 0);
+  const bridgeRpm = subset.reduce(function(sum, s){ return sum + s.rpmEffect; }, 0);
+  const mainDriver = Math.abs(bridgeRpm) >= Math.abs(bridgeSend) ? 'RPM驱动' : '发送量驱动';
+  const highVolumeLowEff = subset.filter(function(s){ return s.share >= 15 && (s.tw.rpm || 0) < fullMedianRpm; }).length;
+  const priceRaiseEffective = subset.filter(function(s){ return s.dspChg >= 5 && s.rpmChg >= 5; }).length;
+  const needFixCount = subset.filter(function(s){ return s.share >= 15 && s.rpmChg <= -5; }).length;
+  const kpiEl = document.getElementById('optimizationKpiGrid');
+  if (kpiEl) {
+    const cards = [
+      { label:'收入变化主因', val:mainDriver, prev:'发送量:' + fmtRev(bridgeSend) + ' / RPM:' + fmtRev(bridgeRpm), chg:Math.abs(bridgeRpm) - Math.abs(bridgeSend) },
+      { label:'高量低效账户数', val:String(highVolumeLowEff), prev:'基准 RPM 中位数 ' + fmt(fullMedianRpm,4), chg:highVolumeLowEff ? -highVolumeLowEff * 6 : 0 },
+      { label:'提价有效账户数', val:String(priceRaiseEffective), prev:'DSP出价≥+5% 且 RPM≥+5%', chg:priceRaiseEffective ? priceRaiseEffective * 6 : 0 },
+      { label:'需优先修复账户数', val:String(needFixCount), prev:'收入占比≥15% 且 RPM≤-5%', chg:needFixCount ? -needFixCount * 6 : 0 }
+    ];
+    kpiEl.innerHTML = cards.map(function(k){
+      const neg = k.chg < -1, pos = k.chg > 1;
+      const cls = neg ? 'kc-neg' : pos ? 'kc-pos' : 'kc-neu';
+      const bcls = neg ? 'b-neg' : pos ? 'b-pos' : 'b-neu';
+      const vcls = neg ? 'var(--red2)' : pos ? 'var(--green2)' : 'var(--accent)';
+      const arrow = k.chg >= 0 ? '▲' : '▼';
+      return '<div class="kpi-card ' + cls + '"><div class="kpi-label">' + k.label + '</div><div class="kpi-value" style="color:' + vcls + '">' + k.val + '</div><div class="kpi-meta"><span class="kpi-prev">' + k.prev + '</span><span class="kpi-badge ' + bcls + '">' + arrow + ' ' + Math.abs(k.chg).toFixed(1) + '</span></div></div>';
+    }).join('');
+  }
+  const priorityRows = subset.slice().sort(function(a,b){ return Math.abs(b.actualChange) - Math.abs(a.actualChange); });
+  const tbody = document.getElementById('priorityTableBody');
+  if (tbody) {
+    tbody.innerHTML = priorityRows.map(function(s){
+      return '<tr><td><span class="dsp-tag"><span class="dsp-dot" style="background:' + s.color + '"></span>' + s.dsp + '</span></td><td>' + fmt(s.share,1) + '%</td><td class="' + (s.actualChange >= 0 ? 'hlg' : 'hlr') + '">' + (s.actualChange >= 0 ? '+' : '') + '¥' + fmtRev(s.actualChange) + '</td><td class="' + (s.rpmChg >= 0 ? 'hlg' : 'hlr') + '">' + fmtDelta(s.rpmChg,1) + '</td><td class="' + (s.cpmChg >= 0 ? 'hlg' : 'hlr') + '">' + fmtDelta(s.cpmChg,1) + '</td><td class="' + (s.dspChg >= 0 ? 'hlg' : 'hlr') + '">' + fmtDelta(s.dspChg,1) + '</td><td class="' + (s.bidChg >= 0 ? 'hlg' : 'hlr') + '">' + fmtDelta(s.bidChg,1) + '</td><td class="' + (s.mediaChg >= 0 ? 'hlg' : 'hlr') + '">' + fmtDelta(s.mediaChg,1) + '</td><td class="' + (s.ctrChg >= 0 ? 'hlg' : 'hlr') + '">' + fmtDelta(s.ctrChg,1) + '</td><td><span class="diag-tag ' + s.diag.cls + '">' + s.diag.text + '</span></td></tr>';
+    }).join('');
+  }
+  mkChart('revenueBridgeChart', {
+    type:'bar',
+    data:{ labels:priorityRows.map(function(s){ return s.dsp; }), datasets:[
+      { label:'发送量贡献', data:priorityRows.map(function(s){ return s.sendEffect; }), stack:'bridge', backgroundColor:'rgba(37,99,235,0.48)', borderColor:'#2563eb', borderWidth:1, borderRadius:4 },
+      { label:'RPM贡献', data:priorityRows.map(function(s){ return s.rpmEffect; }), stack:'bridge', backgroundColor:'rgba(5,150,105,0.42)', borderColor:'#059669', borderWidth:1, borderRadius:4 },
+      { type:'line', label:'真实收入变化', data:priorityRows.map(function(s){ return s.actualChange; }), borderColor:'#e11d48', backgroundColor:'#e11d48', pointRadius:4, borderWidth:2.2, tension:0.25 }
+    ]},
+    options:{
+      responsive:true, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:{ backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78', callbacks:{ label:function(c){ const v = c.raw || 0; return '  ' + c.dataset.label + ': ' + (v >= 0 ? '+' : '') + '¥' + Math.abs(v).toLocaleString('zh-CN',{maximumFractionDigits:0}); } } } },
+      scales:{ x:{ticks:{color:'#4a5a78',font:{size:10}},grid:{color:GRID_COLOR}}, y:{stacked:true,ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return (v < 0 ? '-' : '') + '¥' + fmtRev(Math.abs(v)); }},grid:{color:GRID_COLOR},title:{display:true,text:'收入变化(¥)',color:'#4a5a78',font:{size:10}}} }
+    }
+  });
+  const bridgeMeta = document.getElementById('bridgeMeta');
+  if (bridgeMeta) bridgeMeta.textContent = '当前筛选收入变化拆解：发送量贡献 ' + (bridgeSend >= 0 ? '+' : '') + '¥' + fmtRev(bridgeSend) + ' · RPM贡献 ' + (bridgeRpm >= 0 ? '+' : '') + '¥' + fmtRev(bridgeRpm);
+  const maxBubbleRev = Math.max.apply(null, subset.map(function(s){ return s.tw.totalRev || 0; }).concat([1]));
+  mkChart('bidResponseChart', {
+    type:'bubble',
+    data:{ datasets:subset.map(function(s){ return { label:s.dsp, data:[{ x:s.dspChg, y:s.rpmChg, r:Math.max(7, Math.min(22, Math.sqrt((s.tw.totalRev || 0) / maxBubbleRev) * 22)) }], backgroundColor:s.color + '88', borderColor:s.color, borderWidth:1.5 }; }) },
+    options:{
+      responsive:true, _quadrants:true,
+      plugins:{ legend:{labels:{color:'#4a5a78',font:{size:10},boxWidth:10}}, tooltip:{ backgroundColor:'#fff', borderColor:'#dde3f0', borderWidth:1, titleColor:'#1a2235', bodyColor:'#4a5a78', callbacks:{ label:function(c){ const p = c.raw || { x:0, y:0 }; return '  ' + c.dataset.label + ': DSP出价 ' + fmtDelta(p.x,1) + ' / RPM ' + fmtDelta(p.y,1); } } } },
+      scales:{ x:{ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return v + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'DSP均价环比',color:'#4a5a78',font:{size:10}}}, y:{ticks:{color:'#4a5a78',font:{size:10},callback:function(v){ return v + '%'; }},grid:{color:GRID_COLOR},title:{display:true,text:'RPM环比',color:'#4a5a78',font:{size:10}}} }
+    }
+  });
+  const heatEl = document.getElementById('rpmHeatmapBody');
+  if (heatEl) {
+    heatEl.innerHTML = priorityRows.map(function(s){
+      return '<tr><td class="heatmap-account"><span class="dsp-tag"><span class="dsp-dot" style="background:' + s.color + '"></span>' + s.dsp + '</span></td><td class="heat-cell ' + metricToneClass(s.dspChg) + '">' + fmtDelta(s.dspChg,1) + '</td><td class="heat-cell ' + metricToneClass(s.bidChg) + '">' + fmtDelta(s.bidChg,1) + '</td><td class="heat-cell ' + metricToneClass(s.mediaChg) + '">' + fmtDelta(s.mediaChg,1) + '</td><td class="heat-cell ' + metricToneClass(s.ctrChg) + '">' + fmtDelta(s.ctrChg,1) + '</td><td class="heat-cell ' + metricToneClass(s.cpmChg) + '">' + fmtDelta(s.cpmChg,1) + '</td><td class="heat-cell ' + metricToneClass(s.rpmChg) + '">' + fmtDelta(s.rpmChg,1) + '</td></tr>';
+    }).join('');
+  }
+}
+function setMode(mode) {
+  uiState.currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(function(btn){ btn.classList.toggle('active', btn.getAttribute('data-mode') === mode); });
+  document.getElementById('reportModeView').classList.toggle('active', mode === 'report');
+  document.getElementById('optimizationModeView').classList.toggle('active', mode === 'optimization');
+  if (mode === 'optimization') {
+    requestAnimationFrame(function(){ renderOptimizationMode(uiState.optFilter || '__all__'); });
+  }
+}
+window.handleModeSwitch = function(mode) { setMode(mode); };
+window.handlePillClick = function(el, key) { uiState.reportFilters.trend = key; uiState.reportFilters.price = key; uiState.reportFilters.rate = key; uiState.reportFilters.quality = key; activatePill('filterPills', key); activatePill('priceFilterPills', key); activatePill('rateFilterPills', key); activatePill('qualityFilterPills', key); renderTrendCharts(key); renderRateChart(key); renderQualityChart(key); };
+window.handlePricePillClick = function(el, key) { uiState.reportFilters.price = key; activatePill('priceFilterPills', key); renderPriceChart(key); };
+window.handleRatePillClick = function(el, key) { uiState.reportFilters.rate = key; activatePill('rateFilterPills', key); renderRateChart(key); };
+window.handleQualityPillClick = function(el, key) { uiState.reportFilters.quality = key; activatePill('qualityFilterPills', key); renderQualityChart(key); };
+window.handleOptimizationPillClick = function(el, key) { uiState.optFilter = key; activatePill('optFilterPills', key); renderOptimizationMode(key); };
+window.addEventListener('DOMContentLoaded', function(){
+  activatePill('filterPills', (uiState.reportFilters || {}).trend || '__all__');
+  activatePill('priceFilterPills', (uiState.reportFilters || {}).price || '__all__');
+  activatePill('rateFilterPills', (uiState.reportFilters || {}).rate || '__all__');
+  activatePill('qualityFilterPills', (uiState.reportFilters || {}).quality || '__all__');
+  activatePill('optFilterPills', uiState.optFilter || '__all__');
+  renderTrendCharts((uiState.reportFilters || {}).trend || '__all__');
+  renderPriceChart((uiState.reportFilters || {}).price || '__all__');
+  renderRateChart((uiState.reportFilters || {}).rate || '__all__');
+  renderQualityChart((uiState.reportFilters || {}).quality || '__all__');
+  setMode('report');
+});
+`;
+  const exportedHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSP周报 W${state.weekNum} · ${state.todayStr}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+${styles}
+/* Export-specific overrides */
+#inputScreen { display: none !important; }
+#reportScreen { display: block !important; }
+.btn-back, .btn-export { display: none !important; }
+</style>
+</head>
+<body>
+${reportHTML}
+<script>${standaloneScript}<\/script>
+</body>
+</html>`;
+
+  // ── Trigger download
+  const blob = new Blob([exportedHTML], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `dsp_周报_W${state.weekNum}_${state.todayStr}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+  btn.textContent = '✓ 已下载';
+  setTimeout(() => { btn.textContent = '⬇ 导出本周报告'; btn.disabled = false; }, 2500);
+}
+
+</script>
+</body>
+</html>
